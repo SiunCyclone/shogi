@@ -9,137 +9,16 @@ ObjectModel.prototype.init = function(target) {
 	this.context = this.canvas.getContext("2d");
 }
 
+function debug(data) {
+	$("#debug").html(data);
+}
+
 var socket = io.connect('http://localhost')
 var NAME = "NAME";
 var MASU_SIZE = 60;
 var MASU_NUM = 9;
-var CENTER = { x: 4, y: 4 };
-var HOST = null;
-var KOMA = new function() {
-	this.init = function() {
-		KOMA.img = new Image();
-		KOMA.img.src = "../images/koma.png";
-		KOMA.name = {
-			ou: [ { x: -1, y: -1 }, { x: 0, y: -1 },
-				  { x: 1, y: -1 }, { x: -1, y: 0 },
-			      { x: 1, y: 0 }, { x: -1, y: 1 },
-				  { x: 0, y: 1 }, { x: 1, y: 1 } ],
-			kin: [ { x: -1, y: -1 }, { x: 0, y: -1 },
-				   { x: 1, y: -1 }, { x: -1, y: 0 },
-				   { x: 1, y: 0 }, { x: 0, y: 1 } ],
-			gin: [ { x: -1, y: -1 }, { x: 0, y: -1 },
-				   { x: 1, y: -1 }, { x: -1, y: 1 },
-				   { x: 1, y: 1 } ],
-			uma: [ { x: -1, y: -2 }, { x: 1, y: -2 } ],
-			yari: [ { x: 100, y: 0 } ],
-			hisha: [ { x: 200, y: 200 } ],
-			kaku: [ { x: 300, y: 300 } ],
-			hu: [ { x: 0, y: -1 } ]
-		}
-		KOMA.initialPosition = function() {
-			var ary = new Array;
-			hu(ary);
-			kin(ary);
-			gin(ary);
-			uma(ary);
-			yari(ary);
-			hisha(ary);
-			kaku(ary);
-			ou(ary);
-
-			//まだ短くできる
-			function hu(ary) {
-				var name = "hu";
-				for (var i=0; i<9; ++i)
-					add(ary, name, i, 2);
-			}
-
-			function kin(ary) {
-				var X = 3;
-				var Y = 0;
-				var name = "kin";
-				add(ary, name, X, Y);
-				
-				X = 5;
-				Y = 0;
-				add(ary, name, X, Y);
-			}
-
-			function gin(ary) {
-				var X = 2;
-				var Y = 0;
-				var name = "gin";
-				add(ary, name, X, Y);
-				
-				X = 6;
-				Y = 0;
-				add(ary, name, X, Y);
-			}
-
-			function uma(ary) {
-				var X = 1;
-				var Y = 0;
-				var name = "uma";
-				add(ary, name, X, Y);
-				
-				X = 7;
-				Y = 0;
-				add(ary, name, X, Y);
-			}
-
-			function yari(ary) {
-				var X = 0;
-				var Y = 0;
-				var name = "yari";
-				add(ary, name, X, Y);
-				
-				X = 8;
-				Y = 0;
-				add(ary, name, X, Y);
-			}
-			function hisha(ary) {
-				var X = 1;
-				var Y = 1;
-				var name = "hisha";
-				add(ary, name, X, Y);
-			}
-
-			function kaku(ary) {
-				var X = 7;
-				var Y = 1;
-				var name = "kaku";
-				add(ary, name, X, Y);
-			}
-
-			function ou(ary) {
-				var X = 4;
-				var Y = 0;
-				var name = "ou";
-				add(ary, name, X, Y);
-			}
-			
-			function mirrorX(x, y) {
-				return Math.round( (x - CENTER.x) * Math.cos(Math.PI) - 
-					   (y - CENTER.y) * Math.sin(Math.PI) + CENTER.x );
-			}
-
-			function mirrorY(x, y) {
-				return Math.round( (x - CENTER.x) * Math.sin(Math.PI) +
-					   (y - CENTER.y) * Math.cos(Math.PI) + CENTER.y );
-			}
-			
-			function data(Name, man, X, Y) {
-				return { name: Name , pos: { x: X, y: Y }, host: man };
-			}
-
-			function add(ary, name, X, Y) {
-				ary.push( data(name, HOST[0], X, Y) );
-				ary.push( data(name, HOST[1], mirrorX(X, Y), mirrorY(X, Y)) );
-			}
-			return ary;
-		}
-	}
-}
+var HOST, TURN, ME, KOMA;
+var DATA;
 
 var manager = new ObjectModel();
 var board = new ObjectModel();
@@ -147,7 +26,7 @@ var finger = new ObjectModel();
 var komaList = new ObjectModel();
 
 manager.init = function() {
-	KOMA.init();
+	console.log(KOMA);
 	board.init(NAME);
 	finger.init(NAME);
 	komaList.init(NAME);
@@ -164,13 +43,10 @@ manager.run = function() {
 	};
 }
 
-manager.update = function() {
-
-}
-
 manager.clear = function() {
 	this.init();
 	board.clear();
+	$("#NAME").unbind();
 }
 
 //==================================================
@@ -211,7 +87,6 @@ board.draw = function() {
 
 finger.init = function(target) {
 	ObjectModel.prototype.init(target);
-	this.host = false;
 	this.pos = { x: 4, y: 4 };
 	this.koma = false;
 	this.haveKoma = false;
@@ -221,7 +96,90 @@ finger.run = function() {
 	$("#NAME").mousemove( function(e) {
 		finger.move(e);
 	});
+
+	$("#NAME").on("click", function() {
+		console.log(DATA.turn,"のターンだよん");
+		if (ME != DATA.turn)
+			return;
+		console.log("君のターンだ!!!!");
+		
+		if (finger.haveKoma)
+			putDown();
+		else
+			getKoma();
+
+		function getKoma() {
+			for (var i=0; i<komaList.list.length; ++i) {
+				if (ME != komaList.list[i].host) continue;
+				if ( (finger.pos.x == komaList.list[i].pos.x) &&
+					 (finger.pos.y == komaList.list[i].pos.y) ) {
+					finger.koma = komaList.list[i];
+					finger.haveKoma = true;
+					console.log("駒を持った!");
+				}
+			}
+		}
+
+		function putDown() {
+			//もし動ける範囲なら置く
+			if ( contain(finger.pos, neiMasu()) ) {
+				move();
+				return;
+			}
+			//if(駒の上) 戻す
+
+			function move() {
+				console.log("おいた");
+				socket.emit('update', finger.koma, finger.pos);
+			}
+
+			function neiMasu() {
+				var name = finger.koma.name;
+				var moveToX, moveToY;
+				var neiAry = new Array;
+				for (var i=0; i<KOMA.name[name].length; ++i) {
+					moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
+					moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
+					if ( myKomaExist(moveToX, moveToY) )
+						continue; //もっといい仕組みに変えて
+						//これじゃ敵の駒座標わからん
+					neiAry.push({ x: moveToX, y: moveToY });
+				}
+				return neiAry;
+
+				function myKomaExist(x, y) {
+					for (var i=0; i<komaList.list.length; ++i) {
+						if ( (ME == komaList.list[i].host) && 
+							 (x == komaList.list[i].pos.x) &&
+							 (y == komaList.list[i].pos.y) )
+							return true;
+					}
+					return false;
+				}
+			}
+			
+			function contain(elem, objAry) {
+				for each (var obj in objAry) {
+					if ( equal(elem, obj) )
+						return true;
+				}
+				return false;
+
+				function equal(a, b) {
+					var flag = true;
+					Object.keys(a).forEach(function(key) {
+						if (a[key] != b[key]) {
+							flag = false;
+							return;
+						}
+					});
+					return flag;
+				}
+			}
+		}
+	});
 }
+
 
 finger.move = function(e) {
 	this.pos.x = Math.floor( (e.pageX - $("#NAME").offset()["left"]) / MASU_SIZE );
@@ -230,21 +188,17 @@ finger.move = function(e) {
 		this.pos.x = 8
 	if (this.pos.y > 8)
 		this.pos.y = 8
-	$("#debug").html("x: "+this.pos.x+" y: "+ this.pos.y);
 }
 
 //==================================================
 
 komaList.init = function(target) {
 	ObjectModel.prototype.init(target);
-	this.list = $.extend(true, [], KOMA.initialPosition());
-	socket.emit('koma', this.list);
-
-	console.log(this.list);
-	console.log(this.list.length);
+	this.list = DATA.komaList;
 }
 
 komaList.update = function() {
+	this.list = DATA.komaList;
 	this.draw();
 }
 
@@ -299,25 +253,46 @@ komaList.draw = function() {
 }
 
 $(function() {
+	//debug
+/*
 	$("#NAME").on("click", function() {
 		socket.emit('viewData');
 	});
+*/
 
-	socket.on('search', function() {
-		$("#message").html("<h1>対戦相手を探しています...</h1>");
+	socket.on('init', function(who) {
+		ME = who;
 	});
 
-	socket.on('start', function(data) {
-		HOST = data;
+	socket.on('message', function(msg) {
+		switch (msg) {
+		case "search":
+			$("#message").html("<h1>対戦相手を探しています...</h1>");
+			break;
+		case "quit":
+			$("#message").css({display: "block"})
+						 .html("<h1>相手が対戦をやめました</1>")
+						 .append("<h1>新しい対戦相手を探しています...</h1>");
+			manager.clear();
+			break;
+		}
+	})
+
+	socket.on('start', function(data, koma) {
+		DATA = data;
+		KOMA = koma;
+		KOMA.img = new Image();
+		KOMA.img.src = "../images/koma.png";
 		$("#message").css({display: "none"});
 		manager.run();
+		debug(ME);
 	});
 
-	socket.on('quit', function() {
-		$("#message").css({display: "block"})
-					 .html("<h1>相手が対戦をやめました</1>")
-					 .append("<h1>新しい対戦相手を探しています...</h1>");
-		manager.clear();
+	socket.on('update', function(data) {
+		DATA = data;
+		board.update();
+		komaList.update();
+		finger.haveKoma = false;
 	});
 });
 

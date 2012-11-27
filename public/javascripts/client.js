@@ -1,6 +1,6 @@
 function ObjectModel() {}
 
-ObjectModel.prototype.init = function(target) {
+ObjectModel.prototype.initialize = function(target) {
 	this.canvas = document.getElementById(target);
 	if (!this.canvas || !this.canvas.getContext) {
 		alert("No Canvas support in your browser...");
@@ -30,6 +30,10 @@ manager.init = function() {
 	board.init(NAME);
 	finger.init(NAME);
 	komaList.init(NAME);
+	motiGoma.init("myKoma");
+	motiGoma.draw();
+	motiGoma.init("enemyKoma");	
+	motiGoma.draw();
 }
 
 manager.run = function() {
@@ -39,6 +43,7 @@ manager.run = function() {
 	function run() {
 		board.update();
 		komaList.update();
+		motiGoma.update();
 		finger.run();
 	};
 }
@@ -46,13 +51,16 @@ manager.run = function() {
 manager.clear = function() {
 	this.init();
 	board.clear();
-	$("#NAME").unbind();
+	motiGoma.init("myKoma");
+	motiGoma.clear()
+	motiGoma.init("enemyKoma");
+	motiGoma.clear()
 }
 
 //==================================================
 
 board.init = function(target) {
-	ObjectModel.prototype.init(target);
+	this.initialize(target);
 	this.size = { x: 540, y: 540 };
 }
 
@@ -86,7 +94,7 @@ board.draw = function() {
 //==================================================
 
 finger.init = function(target) {
-	ObjectModel.prototype.init(target);
+	this.initialize(target);
 	this.pos = { x: 4, y: 4 };
 	this.koma = false;
 	this.haveKoma = false;
@@ -239,13 +247,14 @@ finger.move = function(e) {
 //==================================================
 
 komaList.init = function(target) {
-	ObjectModel.prototype.init(target);
+	this.initialize(target);
 	this.list = DATA.komaList;
 }
 
 komaList.update = function() {
 	this.list = DATA.komaList;
 	this.draw();
+	console.log(this);
 }
 
 komaList.move = function(koma, moveTo) {
@@ -284,8 +293,9 @@ komaList.draw = function() {
 
 //==================================================
 
-motiGoma.init = function() {
-	this.list = new Array();
+motiGoma.init = function(target) {
+	this.initialize(target);
+	this.size = { x: 140, y: 290 };
 }
 
 motiGoma.update = function() {
@@ -294,13 +304,12 @@ motiGoma.update = function() {
 }
 
 motiGoma.clear = function() {
-
-
+	this.context.clearRect(0, 0, this.size.x, this.size.y);
 }
 
 motiGoma.draw = function() {
-
-
+	this.context.fillStyle = "#BD6600";
+	this.context.fillRect(0, 0, this.size.x, this.size.y);
 }
 
 
@@ -315,11 +324,20 @@ $(function() {
 		switch (msg) {
 		case "search":
 			$("#message").html("<h1>対戦相手を探しています...</h1>");
+			$("#NAME").css({display: "none"});
+			$("#myKoma").css({display: "none"});
+			$("#enemyKoma").css({display: "none"});
 			break;
 		case "quit":
 			$("#message").css({display: "block"})
 						 .html("<h1>相手が対戦をやめました</1>")
 						 .append("<h1>新しい対戦相手を探しています...</h1>");
+			$("#NAME").css({display: "none"})
+					  .unbind();
+			$("#myKoma").css({display: "none"})
+						.unbind();
+			$("#enemyKoma").css({display: "none"})
+						   .unbind();
 			manager.clear();
 			break;
 		}
@@ -330,6 +348,9 @@ $(function() {
 		KOMA = koma;
 		KOMA.img = new Image();
 		KOMA.img.src = "../images/koma.png";
+		$("#NAME").css({display: "block"});
+		$("#myKoma").css({display: "block"});
+		$("#enemyKoma").css({display: "block"});
 		$("#message").css({display: "none"});
 		manager.run();
 		debug(ME);

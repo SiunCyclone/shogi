@@ -1,6 +1,7 @@
 (function() {
 	var data = { host: new Array,
 				 komaList: new Array,
+				 motiGoma: new Array,
 				 turn: null }
 	var CENTER = { x: 4, y: 4 };
 	var KOMA = new function() {
@@ -142,36 +143,42 @@
 			console.log(data.turn,"のターン");
 		}
 
-		socket.on('update', function(koma, moveTo) {
+		socket.on('update', function(U) {
 			//ターンを変える
 			if (data.turn == data.host[0])
 				data.turn = data.host[1];
 			else if (data.turn == data.host[1])
 				data.turn = data.host[0];
-			//駒を更新する
+			//盤の駒、持ち駒更新
+			if (U.getKoma) {
+				for (var i=0; i<data.komaList.length; ++i) {
+					if ( (data.komaList[i].pos.x == U.moveTo.x) &&
+						 (data.komaList[i].pos.y == U.moveTo.y) ) {
+						data.komaList[i].pos.x = CENTER.x; //しなくてもいい
+						data.komaList[i].pos.y = CENTER.y;
+						data.komaList[i].host = U.me;
+						data.motiGoma.push(data.komaList[i]);
+						data.komaList.splice(i, 1);
+						break;
+					}
+				}
+			} 
 			for (var i=0; i<data.komaList.length; ++i) {
-				if ( (data.komaList[i].pos.x == koma.pos.x) &&
-					 (data.komaList[i].pos.y == koma.pos.y) ) {
-					data.komaList[i].pos.x = moveTo.x;
-					data.komaList[i].pos.y = moveTo.y;
+				if ( (data.komaList[i].pos.x == U.koma.pos.x) &&
+					 (data.komaList[i].pos.y == U.koma.pos.y) ) {
+					data.komaList[i].pos.x = U.moveTo.x;
+					data.komaList[i].pos.y = U.moveTo.y;
 					break;
 				}
 			}
+
 			//クライアントに更新を伝える
 			socket.broadcast.emit('update', data);
 			socket.emit('update', data);
 		})
 
-		//駒の初期化しろ
-
-/*
-		socket.on('viewData', function() {
-			console.log(data);
-		});
-*/
-
 		socket.on('disconnect', function() {
-			socket.broadcast.emit('message', 'quit'); //新しく来た人以外
+			socket.broadcast.emit('message', 'quit');
 		});
 
 	});

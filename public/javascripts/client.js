@@ -17,13 +17,13 @@ var socket = io.connect('http://localhost')
 var NAME = "NAME";
 var MASU_SIZE = 60;
 var MASU_NUM = 9;
-var HOST, TURN, ME, KOMA;
-var DATA;
+var ME, KOMA, DATA;
 
 var manager = new ObjectModel();
 var board = new ObjectModel();
 var finger = new ObjectModel();
 var komaList = new ObjectModel();
+var motiGoma = new ObjectModel();
 
 manager.init = function() {
 	console.log(KOMA);
@@ -115,47 +115,68 @@ finger.run = function() {
 					 (finger.pos.y == komaList.list[i].pos.y) ) {
 					finger.koma = komaList.list[i];
 					finger.haveKoma = true;
-					console.log("駒を持った!");
+					draw();
+				}
+			}
+
+			function draw() {
+				current();
+				neighbor();
+				komaList.draw();
+
+				// 飛車とか特別なのは未実装
+				function current() {
+					finger.context.fillStyle = "#FFD2FF";
+					finger.context.fillRect( (finger.koma.pos.x * MASU_SIZE) + 1,
+											 (finger.koma.pos.y * MASU_SIZE) + 1,
+											 MASU_SIZE - 2, MASU_SIZE - 2);
+					finger.context.fill();
+				}
+				
+				function neighbor() {
+					var neiAry = neiMasu();
+					for (var i=0; i<neiAry.length; ++i) {
+						finger.context.fillStyle = "#C0C0C0";
+						finger.context.fillRect(neiAry[i].x * MASU_SIZE + 1,
+												neiAry[i].y * MASU_SIZE + 1,
+												MASU_SIZE - 2, MASU_SIZE - 2);
+						finger.context.fill();
+					}
 				}
 			}
 		}
 
 		function putDown() {
-			//もし動ける範囲なら置く
+			//動ける範囲なら置く
 			if ( contain(finger.pos, neiMasu()) ) {
-				move();
+				//取れるなら敵駒取る
+				for (var i=0; i<komaList.list.length; ++i) {
+					if ( (ME != komaList.list[i].host) && 
+						 (finger.pos.x == komaList.list[i].pos.x) &&
+						 (finger.pos.y == komaList.list[i].pos.y) ) {
+						socket.emit('update', { koma: finger.koma,
+												moveTo: finger.pos,
+												getKoma: true,
+												me: ME });
+						finger.haveKoma = false;
+						return;
+					}
+				}
+				socket.emit('update', { koma: finger.koma,
+										moveTo: finger.pos,
+										getKoma: false,
+										me: ME });
+				finger.haveKoma = false;
 				return;
 			}
-			//if(駒の上) 戻す
+			//元にもどす
+			if ( (finger.pos.x == finger.koma.pos.x) &&
+				 (finger.pos.y == finger.koma.pos.y) ) {
+				finger.haveKoma = false;
+				finger.koma = false;
 
-			function move() {
-				console.log("おいた");
-				socket.emit('update', finger.koma, finger.pos);
-			}
-
-			function neiMasu() {
-				var name = finger.koma.name;
-				var moveToX, moveToY;
-				var neiAry = new Array;
-				for (var i=0; i<KOMA.name[name].length; ++i) {
-					moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
-					moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
-					if ( myKomaExist(moveToX, moveToY) )
-						continue; //もっといい仕組みに変えて
-						//これじゃ敵の駒座標わからん
-					neiAry.push({ x: moveToX, y: moveToY });
-				}
-				return neiAry;
-
-				function myKomaExist(x, y) {
-					for (var i=0; i<komaList.list.length; ++i) {
-						if ( (ME == komaList.list[i].host) && 
-							 (x == komaList.list[i].pos.x) &&
-							 (y == komaList.list[i].pos.y) )
-							return true;
-					}
-					return false;
-				}
+				board.update();
+				komaList.draw();
 			}
 			
 			function contain(elem, objAry) {
@@ -175,6 +196,31 @@ finger.run = function() {
 					});
 					return flag;
 				}
+			}
+		}
+
+		function neiMasu() {
+			var name = finger.koma.name;
+			var moveToX, moveToY;
+			var neiAry = new Array;
+			for (var i=0; i<KOMA.name[name].length; ++i) {
+				moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
+				moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
+				if ( myKomaExist(moveToX, moveToY) )
+					continue; //もっといい仕組みに変えて
+					//これじゃ敵の駒座標わからん
+				neiAry.push({ x: moveToX, y: moveToY });
+			}
+			return neiAry;
+
+			function myKomaExist(x, y) {
+				for (var i=0; i<komaList.list.length; ++i) {
+					if ( (ME == komaList.list[i].host) && 
+						 (x == komaList.list[i].pos.x) &&
+						 (y == komaList.list[i].pos.y) )
+						return true;
+				}
+				return false;
 			}
 		}
 	});
@@ -217,30 +263,14 @@ komaList.draw = function() {
 	//敵は反転させて。
 	for (var i=0; i<this.list.length; ++i) {
 		switch (this.list[i].name) {
-		case "ou":
-			drawFunc(50, 0, 135, 158, 0, -2, 55, 62, i);
-			break;
-		case "kin":
-			drawFunc(435, 0, 130, 170, 6, -6, 50, 70, i);
-			break;
-		case "gin":
-			drawFunc(50,310, 130, 145, 2, -2, 50, 60, i);
-			break;
-		case "uma":
-			drawFunc(190, 310, 120, 148, 6, -4, 47, 62, i);
-			break;
-		case "yari":
-			drawFunc(320, 310, 115, 150, 6, -4, 47, 62, i);
-			break;
-		case "hisha":
-			drawFunc(190, 2, 120, 160, 5, -4, 50, 66, i);
-			break;
-		case "kaku":
-			drawFunc(315, 2, 120, 160, 5, -4, 50, 66, i);
-			break;
-		case "hu":
-			drawFunc(435, 310, 120, 155, 3, -6, 50, 66, i);
-			break;
+		case "ou": drawFunc(50, 0, 135, 158, 0, -2, 55, 62, i); break;
+		case "kin": drawFunc(435, 0, 130, 170, 6, -6, 50, 70, i); break;
+		case "gin": drawFunc(50,310, 130, 145, 2, -2, 50, 60, i); break;
+		case "uma": drawFunc(190, 310, 120, 148, 6, -4, 47, 62, i); break;
+		case "yari": drawFunc(320, 310, 115, 150, 6, -4, 47, 62, i); break;
+		case "hisha": drawFunc(190, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "kaku": drawFunc(315, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "hu": drawFunc(435, 310, 120, 155, 3, -6, 50, 66, i); break;
 		}
 	}
 
@@ -252,14 +282,31 @@ komaList.draw = function() {
 	}
 }
 
-$(function() {
-	//debug
-/*
-	$("#NAME").on("click", function() {
-		socket.emit('viewData');
-	});
-*/
+//==================================================
 
+motiGoma.init = function() {
+	this.list = new Array();
+}
+
+motiGoma.update = function() {
+	this.clear();
+	this.draw();
+}
+
+motiGoma.clear = function() {
+
+
+}
+
+motiGoma.draw = function() {
+
+
+}
+
+
+//==================================================
+
+$(function() {
 	socket.on('init', function(who) {
 		ME = who;
 	});
@@ -292,35 +339,15 @@ $(function() {
 		DATA = data;
 		board.update();
 		komaList.update();
-		finger.haveKoma = false;
 	});
 });
 
-/*
-var socket = io.connect('http://localhost'); // 1
+//盤上をひっくり返す
+//駒を取る
+//手持ち駒リスト
+//駒成る
+//王をとったら終わり
 
-socket.on('connect', function() {
-	socket.emit('msg send', 'data', function(data) {
-	log(data);
-	});
-	socket.on('msg push', function (msg, fn) {
-		fn(msg + ' was successfully pushed');
-	});
-});
-*/
-/*
-	socket.on('connect', function() { // 2
-	  console.log('サーバーとconnected');
-	  socket.emit('msg send', 'data'); // 3
-	  socket.on('msg push', function (msg) { // 7
-		console.log(msg); // 8
-	  });
-	});
-*/
-/*
-  var socket = io.connect('http://localhost');
-  socket.on('news', function (data) {
-    console.log(data);
-    socket.emit('my other event', { my: 'data' });
-  });
-*/
+
+//どっちのターンか表示
+

@@ -196,8 +196,7 @@ finger.run = function() {
 				moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
 				moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
 				if ( myKomaExist(moveToX, moveToY) )
-					continue; //もっといい仕組みに変えて
-					//これじゃ敵の駒座標わからん
+					continue;
 				neiAry.push({ x: moveToX, y: moveToY });
 			}
 			return neiAry;
@@ -298,83 +297,37 @@ motiGoma.draw = function(target) {
 	this.context.fillRect(0, 0, this.size.x, this.size.y);
 
 	var myKoma = new Array;
-	var enemyKoma = new Array;
-	var x, y;
 	for (var i=0; i<DATA.motiGoma.length; ++i) {
-		if (DATA.motiGoma[i].host == ME)
+		if ( (target == "myKoma") && (ME == DATA.motiGoma[i].host) )
 			myKoma.push(DATA.motiGoma[i]);
-		else
-			enemyKoma.push(DATA.motiGoma[i]);
+		else if ( (target == "enemyKoma") && (ME != DATA.motiGoma[i].host) )
+			myKoma.push(DATA.motiGoma[i]);
 	}
-	if (target == "myKoma") {
-		if (myKoma.length > 10) {
-			myKoma = uniqObjAry(myKoma);
-			for (var i=0; i<myKoma.length; ++i) {
-				x = (i%2==0) ? 0 : 1;
-				y = Math.floor(i/2);
-				drawFunc(myKoma[i].name, "g");
-			}
-		} else {
-			for (var i=0; i<DATA.motiGoma.length; ++i) { 
-				if (ME == DATA.motiGoma[i].host)
-					drawFunc(DATA.motiGoma[i].name, "f");
-			}
-		}
-	} else if (target == "enemyKoma") {
-		if (enemyKoma.length > 10) {
-			console.log("敵描画");
-			console.log("enemyKoma bef", enemyKoma);
-			enemyKoma = uniqObjAry(enemyKoma);
-			console.log("enemyKoma af", enemyKoma);
-			for (var i=0; i<enemyKoma.length; ++i) {
-				x = (i%2==0) ? 0 : 1;
-				y = Math.floor(i/2);
-				drawFunc(enemyKoma[i].name, "g");
-			}
-		} else {
-			for (var i=0; i<DATA.motiGoma.length; ++i) { 
-				if (ME != DATA.motiGoma[i].host)
-					drawFunc(DATA.motiGoma[i].name, "f");
-			}
-		}
-	}
+	for (var i=0; i<DATA.motiGoma.length; ++i)
+		drawFunc(DATA.motiGoma[i].name, i);
 
-	function drawFunc(name, type) {
-		if (type == "f") {
-			switch (name) {
-			case "ou": f(50, 0, 135, 158, 0, -2, 55, 62, i); break;
-			case "kin": f(435, 0, 130, 170, 6, -6, 50, 70, i); break;
-			case "gin": f(50,310, 130, 145, 2, -2, 50, 60, i); break;
-			case "uma": f(190, 310, 120, 148, 6, -4, 47, 62, i); break;
-			case "yari": f(320, 310, 115, 150, 6, -4, 47, 62, i); break;
-			case "hisha": f(190, 2, 120, 160, 5, -4, 50, 66, i); break;
-			case "kaku": f(315, 2, 120, 160, 5, -4, 50, 66, i); break;
-			case "hu": f(435, 310, 120, 155, 3, -6, 50, 66, i); break;
-			}
-		} else if (type == "g") {
-			switch (name) {
-			case "ou": g(50, 0, 135, 158, 0, -2, 27.5, 31, x, y); break;
-			case "kin": g(435, 0, 130, 170, 6, -4, 25, 35, x, y); break;
-			case "gin": g(50,310, 130, 145, 2, -4, 25, 30, x, y); break;
-			case "uma": g(190, 310, 120, 148, 6, -4, 23.5, 31, x, y); break;
-			case "yari": g(320, 310, 115, 150, 6, -4, 23.5, 31, x, y); break;
-			case "hisha": g(190, 2, 120, 160, 5, -4, 25, 33, x, y); break;
-			case "kaku": g(315, 2, 120, 160, 5, -4, 25, 33, x, y); break;
-			case "hu": g(435, 310, 120, 155, 3, -6, 25, 33, x, y); break;
-			}
+	function drawFunc(name, i) {
+		switch (name) {
+		case "ou": f(50, 0, 135, 158, 0, -2, 55, 62, i); break;
+		case "kin": f(435, 0, 130, 170, 6, -6, 50, 70, i); break;
+		case "gin": f(50,310, 130, 145, 2, -2, 50, 60, i); break;
+		case "uma": f(190, 310, 120, 148, 6, -4, 47, 62, i); break;
+		case "yari": f(320, 310, 115, 150, 6, -4, 47, 62, i); break;
+		case "hisha": f(190, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "kaku": f(315, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "hu": f(435, 310, 120, 155, 3, -6, 50, 66, i); break;
 		}
 
 		function f(sx, sy, sw, sh, gosaX, gosaY, dw, dh, i) {
+			var size = MASU_SIZE;
+			if (myKoma.length>10) {
+				dw = dw/2;
+				dh = dh/2;
+				size = MASU_SIZE/2;
+			}
 			motiGoma.context.drawImage(KOMA.img, sx, sy, sw, sh,
-									   DATA.motiGoma[i].pos.x * MASU_SIZE + gosaX,
-									   Math.floor(DATA.motiGoma[i].pos.y/2) * MASU_SIZE + gosaY,
-									   dw, dh);
-		}
-
-		function g(sx, sy, sw, sh, gosaX, gosaY, dw, dh, x, y) {
-			motiGoma.context.drawImage(KOMA.img, sx, sy, sw, sh,
-									   x * (MASU_SIZE/2) + gosaX,
-									   y * (MASU_SIZE/2) + gosaY,
+									   DATA.motiGoma[i].pos.x * size + gosaX,
+									   DATA.motiGoma[i].pos.y * size + gosaY,
 									   dw, dh);
 		}
 	}

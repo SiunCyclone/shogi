@@ -135,6 +135,7 @@
 		if (me == data.host[0]) {
 			//data.motiGoma.push( { pos: {x: 0, y: 0}, name: "kin", host: me } );
 		} else {
+/*
 			data.motiGoma.push( { pos: {x: 0, y: 0}, name: "uma", host: me } );
 			data.motiGoma.push( { pos: {x: 1, y: 1}, name: "kin", host: me } );
 			data.motiGoma.push( { pos: {x: 0, y: 2}, name: "gin", host: me } );
@@ -144,7 +145,23 @@
 			data.motiGoma.push( { pos: {x: 0, y: 6}, name: "gin", host: me } );
 			data.motiGoma.push( { pos: {x: 1, y: 7}, name: "ou", host: me } );
 			data.motiGoma.push( { pos: {x: 0, y: 8}, name: "hu", host: me } );
-		//	data.motiGoma.push( { pos: {x: 1, y: 9}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 9}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 10}, name: "uma", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 11}, name: "kin", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 12}, name: "gin", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 13}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 14}, name: "hu", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 15}, name: "kin", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 16}, name: "gin", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 17}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 18}, name: "hu", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 19}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 20}, name: "uma", host: me } );
+			data.motiGoma.push( { pos: {x: 2, y: 0}, name: "kin", host: me } );
+			data.motiGoma.push( { pos: {x: 3, y: 1}, name: "gin", host: me } );
+			data.motiGoma.push( { pos: {x: 2, y: 2}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 3, y: 3}, name: "hu", host: me } );
+*/
 		}
 		
 		socket.emit('init', me);
@@ -183,8 +200,12 @@
 				for (var i=0; i<data.komaList.length; ++i) {
 					if ( (data.komaList[i].pos.x == U.moveTo.x) &&
 						 (data.komaList[i].pos.y == U.moveTo.y) ) {
-						data.komaList[i].pos.x = (myKoma.length%2==0) ? 0 : 1;
-						data.komaList[i].pos.y = myKoma.length;
+						data.komaList[i].pos.x = (myKoma.length<20) ?
+												 ( (myKoma.length%2==0) ? 0 : 1 ) :
+												 ( (myKoma.length%2==0) ? 2 : 3 );
+						data.komaList[i].pos.y = (myKoma.length<20) ?
+												 Math.floor(myKoma.length/2) :
+												 Math.floor( (myKoma.length-20)/2 );
 						data.komaList[i].host = U.me;
 						data.motiGoma.push(data.komaList[i]);
 						data.komaList.splice(i, 1);
@@ -200,7 +221,6 @@
 					break;
 				}
 			}
-
 			//クライアントに更新を伝える
 			socket.broadcast.emit('update', data);
 			socket.emit('update', data);

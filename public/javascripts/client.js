@@ -13,18 +13,20 @@ function debug(data) {
 	$("#debug").html(data);
 }
 
-var socket = io.connect('http://localhost')
-var NAME = "NAME";
-var MASU_SIZE = 60;
-var MASU_NUM = 9;
-var ME, KOMA, DATA;
-var CENTER = { x: 4, y: 4 }; //なんかきもい
+var socket = io.connect('http://localhost');
+var NAME = "NAME"
+  , MASU_SIZE = 60
+  , MASU_NUM = 9
+  , ME
+  , KOMA
+  , DATA
+  , CENTER = { x: 4, y: 4 }; //なんかきもい
 
-var manager = new ObjectModel();
-var board = new ObjectModel();
-var finger = new ObjectModel();
-var komaList = new ObjectModel();
-var motiGoma = new ObjectModel();
+var manager = new ObjectModel()
+  ,  board = new ObjectModel()
+  ,  finger = new ObjectModel()
+  ,  komaList = new ObjectModel()
+  ,  motiGoma = new ObjectModel();
 
 function mirrorX(x, y) {
 	return Math.round( (x - CENTER.x) * Math.cos(Math.PI) - 
@@ -154,6 +156,7 @@ finger.run = function() {
 				
 				function neighbor() {
 					var neiAry = neiMasu();
+					console.log("neiAry", neiAry); //debug
 					for (var i=0; i<neiAry.length; ++i) {
 						finger.context.fillStyle = "#C0C0C0";
 						finger.context.fillRect(neiAry[i].x * MASU_SIZE + 1,
@@ -203,20 +206,79 @@ finger.run = function() {
 
 		function neiMasu() {
 			var name = finger.koma.name;
-			var moveToX, moveToY;
 			var neiAry = new Array;
-			for (var i=0; i<KOMA.name[name].length; ++i) {
-				moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
-				moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
-				if ( myKomaExist(moveToX, moveToY) )
-					continue;
-				neiAry.push({ x: moveToX, y: moveToY });
+			var moveToX
+			  , moveToY;
+
+			var leftKoma = false
+			  , rightKoma = false;
+			switch (name) {
+			case "hisha":
+				//横
+				for (var i=finger.koma.pos.x-1; i>-1; --i) {
+					if ( !myKomaExist(i, finger.koma.pos.y) ) {
+						neiAry.push({ x: i, y: finger.koma.pos.y });
+						if ( enemyKomaExist(i, finger.koma.pos.y) )
+							break;
+					} else
+						break;
+				}
+				for (var i=finger.koma.pos.x+1; i<9; ++i) {
+					if ( !myKomaExist(i, finger.koma.pos.y) ) {
+						neiAry.push({ x: i, y: finger.koma.pos.y });
+						if ( enemyKomaExist(i, finger.koma.pos.y) )
+							break;
+					} else
+						break;
+				}
+				//縦
+				for (var i=finger.koma.pos.y-1; i>-1; --i) {
+					if ( !myKomaExist(finger.koma.pos.x, i) ) {
+						neiAry.push({ x: finger.koma.pos.x, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x, i) )
+							break;
+					} else
+						break;
+				}
+				for (var i=finger.koma.pos.y+1; i<9; ++i) {
+					if ( !myKomaExist(finger.koma.pos.x, i) ) {
+						neiAry.push({ x: finger.koma.pos.x, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x, i) )
+							break;
+					} else
+						break;
+				}
+				break;
+			case "kaku":
+				break;
+			case "yari":
+				break;
+			default:
+				for (var i=0; i<KOMA.name[name].length; ++i) {
+					moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
+					moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
+					if ( myKomaExist(moveToX, moveToY) )
+						continue;
+					neiAry.push({ x: moveToX, y: moveToY });
+				}
+				break;
 			}
 			return neiAry;
 
+			//短くできる
 			function myKomaExist(x, y) {
 				for (var i=0; i<komaList.list.length; ++i) {
 					if ( (ME == komaList.list[i].host) && 
+						 (x == komaList.list[i].pos.x) &&
+						 (y == komaList.list[i].pos.y) )
+						return true;
+				}
+				return false;
+			}
+
+			function enemyKomaExist(x, y) {
+				for (var i=0; i<komaList.list.length; ++i) {
+					if ( (ME != komaList.list[i].host) && 
 						 (x == komaList.list[i].pos.x) &&
 						 (y == komaList.list[i].pos.y) )
 						return true;
@@ -299,8 +361,8 @@ komaList.draw = function() {
 	}
 
 	function drawFunc(sx, sy, sw, sh, gosaX, gosaY, dw, dh, i) {
-		var x = komaList.list[i].pos.x;
-		var y = komaList.list[i].pos.y;
+		var x = komaList.list[i].pos.x
+		  , y = komaList.list[i].pos.y;
 		komaList.context.save();
 		if (ME != komaList.list[i].host) {
 			komaList.context.translate((komaList.list[i].pos.x+1) * MASU_SIZE,
@@ -543,12 +605,9 @@ $(function() {
 	});
 });
 
-//盤上をひっくり返す
-//駒を取る
-//手持ち駒リスト
 //駒成る
 //王をとったら終わり
-
+//飛車、角とか
 
 //どっちのターンか表示
 

@@ -19,7 +19,9 @@
 			uma: [ { x: -1, y: -2 }, { x: 1, y: -2 } ],
 			yari: [ { x: 100, y: 0 } ],
 			hisha: [ { x: 200, y: 200 } ],
+			hishaN: [ { x: 201, y: 201 } ],
 			kaku: [ { x: 300, y: 300 } ],
+			kakuN: [ { x: 301, y: 301 } ],
 			hu: [ { x: 0, y: -1 } ]
 		}
 		this.initialPosition = function() {
@@ -132,40 +134,7 @@
 		data.host = Object.keys(socket.manager.roomClients)
 		console.log("メンバー増える",Object.keys(socket.manager.roomClients));
 
-		if (me == data.host[0]) {
-			//data.motiGoma.push( { pos: {x: 0, y: 0}, name: "kin", host: me } );
-		} else {
-/*
-			data.motiGoma.push( { pos: {x: 0, y: 0}, name: "uma", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 1}, name: "kin", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 2}, name: "gin", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 3}, name: "ou", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 4}, name: "hu", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 5}, name: "kin", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 6}, name: "gin", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 7}, name: "ou", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 8}, name: "hu", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 9}, name: "ou", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 10}, name: "uma", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 11}, name: "kin", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 12}, name: "gin", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 13}, name: "ou", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 14}, name: "hu", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 15}, name: "kin", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 16}, name: "gin", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 17}, name: "ou", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 18}, name: "hu", host: me } );
-			data.motiGoma.push( { pos: {x: 1, y: 19}, name: "ou", host: me } );
-			data.motiGoma.push( { pos: {x: 0, y: 20}, name: "uma", host: me } );
-			data.motiGoma.push( { pos: {x: 2, y: 0}, name: "kin", host: me } );
-			data.motiGoma.push( { pos: {x: 3, y: 1}, name: "gin", host: me } );
-			data.motiGoma.push( { pos: {x: 2, y: 2}, name: "ou", host: me } );
-			data.motiGoma.push( { pos: {x: 3, y: 3}, name: "hu", host: me } );
-*/
-		}
-		
 		socket.emit('init', me);
-
 
 		if (data.host.length < 2) {
 			socket.emit('message', 'search');
@@ -190,7 +159,7 @@
 				data.turn = data.host[1];
 			else if (data.turn == data.host[1])
 				data.turn = data.host[0];
-			//盤の駒、持ち駒更新
+			//持ち駒更新
 			var myKoma = new Array;
 			for (var i=0; i<data.motiGoma.length; ++i) {
 				if (data.motiGoma[i].host == U.me)
@@ -213,6 +182,7 @@
 					}
 				}
 			} 
+			//盤の駒
 			for (var i=0; i<data.komaList.length; ++i) {
 				if ( (data.komaList[i].pos.x == U.koma.pos.x) &&
 					 (data.komaList[i].pos.y == U.koma.pos.y) ) {

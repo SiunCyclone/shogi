@@ -209,8 +209,57 @@ finger.run = function() {
 
 			var leftKoma = false
 			  , rightKoma = false;
+			//きたねぇ
 			switch (name) {
 			case "hisha":
+				hisha();
+				break;
+			case "kaku":
+				kaku();
+				break;
+			case "yari":
+				for (var i=finger.koma.pos.y-1; i>-1; --i) {
+					if ( !myKomaExist(finger.koma.pos.x, i) ) {
+						neiAry.push({ x: finger.koma.pos.x, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x, i) )
+							break;
+					} else
+						break;
+				}
+				break;
+			case "hishaN":
+				hisha();
+				for (var i=0; i<KOMA.name["ou"].length; ++i) {
+					moveToX = (finger.koma.pos.x + KOMA.name["ou"][i].x);
+					moveToY = (finger.koma.pos.y + KOMA.name["ou"][i].y);
+					if ( myKomaExist(moveToX, moveToY) )
+						continue;
+					neiAry.push({ x: moveToX, y: moveToY });
+				}
+				break;
+			case "kakuN":
+				kaku();
+				for (var i=0; i<KOMA.name["ou"].length; ++i) {
+					moveToX = (finger.koma.pos.x + KOMA.name["ou"][i].x);
+					moveToY = (finger.koma.pos.y + KOMA.name["ou"][i].y);
+					if ( myKomaExist(moveToX, moveToY) )
+						continue;
+					neiAry.push({ x: moveToX, y: moveToY });
+				}
+				break;
+			default:
+				for (var i=0; i<KOMA.name[name].length; ++i) {
+					moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
+					moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
+					if ( myKomaExist(moveToX, moveToY) )
+						continue;
+					neiAry.push({ x: moveToX, y: moveToY });
+				}
+				break;
+			}
+			return neiAry;
+
+			function hisha() {
 				//横
 				for (var i=finger.koma.pos.x-1; i>-1; --i) {
 					if ( !myKomaExist(i, finger.koma.pos.y) ) {
@@ -245,8 +294,9 @@ finger.run = function() {
 					} else
 						break;
 				}
-				break;
-			case "kaku":
+			}
+
+			function kaku() {
 				//上
 				var t = 1;
 				for (var i=finger.koma.pos.y-1; i>-1; --i) {
@@ -289,28 +339,7 @@ finger.run = function() {
 					} else
 						break;
 				}
-				break;
-			case "yari":
-				for (var i=finger.koma.pos.y-1; i>-1; --i) {
-					if ( !myKomaExist(finger.koma.pos.x, i) ) {
-						neiAry.push({ x: finger.koma.pos.x, y: i });
-						if ( enemyKomaExist(finger.koma.pos.x, i) )
-							break;
-					} else
-						break;
-				}
-				break;
-			default:
-				for (var i=0; i<KOMA.name[name].length; ++i) {
-					moveToX = (finger.koma.pos.x + KOMA.name[name][i].x);
-					moveToY = (finger.koma.pos.y + KOMA.name[name][i].y);
-					if ( myKomaExist(moveToX, moveToY) )
-						continue;
-					neiAry.push({ x: moveToX, y: moveToY });
-				}
-				break;
 			}
-			return neiAry;
 
 			//短くできる
 			function myKomaExist(x, y) {

@@ -143,7 +143,6 @@ finger.run = function() {
 				neighbor();
 				komaList.draw();
 
-				// #TODO 飛車とか特別なのは未実装
 				function current() {
 					finger.context.fillStyle = "#FFD2FF";
 					finger.context.fillRect( (finger.koma.pos.x * MASU_SIZE) + 1,
@@ -399,12 +398,18 @@ komaList.draw = function() {
 		switch (this.list[i].name) {
 		case "ou": drawFunc(50, 0, 135, 158, 0, -2, 55, 62, i); break;
 		case "kin": drawFunc(435, 0, 130, 170, 6, -6, 50, 70, i); break;
-		case "gin": drawFunc(50,310, 130, 145, 2, -2, 50, 60, i); break;
+		case "gin": drawFunc(50, 310, 130, 145, 2, -2, 50, 60, i); break;
+		case "ginN": drawFunc(50, 456, 130, 145, 6, 3, 50, 60, i); break;
 		case "uma": drawFunc(190, 310, 120, 148, 6, -4, 47, 62, i); break;
+		case "umaN": drawFunc(190, 458, 120, 150, 6, 3, 48, 63, i); break;
 		case "yari": drawFunc(320, 310, 115, 150, 6, -4, 47, 62, i); break;
+		case "yariN": drawFunc(320, 458, 115, 150, 6, 3, 47, 62, i); break;
 		case "hisha": drawFunc(190, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "hishaN": drawFunc(190, 157, 120, 160, 5, -3, 50, 66, i); break;
 		case "kaku": drawFunc(315, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "kakuN": drawFunc(315, 157, 120, 160, 5, -2, 50, 66, i); break;
 		case "hu": drawFunc(435, 310, 120, 155, 3, -6, 50, 66, i); break;
+		case "huN": drawFunc(435, 462, 120, 164, 0, 2, 52, 69, i); break;
 		}
 	}
 
@@ -462,12 +467,18 @@ motiGoma.draw = function(target) {
 		switch (name) {
 		case "ou": f(50, 0, 135, 158, 0, -2, 55, 62, i); break;
 		case "kin": f(435, 0, 130, 170, 6, -6, 50, 70, i); break;
-		case "gin": f(50,310, 130, 145, 2, -2, 50, 60, i); break;
+		case "gin": f(50, 310, 130, 145, 2, -2, 50, 60, i); break;
+		case "ginN": f(50, 310, 130, 145, 2, -2, 50, 60, i); break;
 		case "uma": f(190, 310, 120, 148, 6, -4, 47, 62, i); break;
+		case "umaN": f(190, 310, 120, 148, 6, -4, 47, 62, i); break;
 		case "yari": f(320, 310, 115, 150, 6, -4, 47, 62, i); break;
+		case "yariN": f(320, 310, 115, 150, 6, -4, 47, 62, i); break;
 		case "hisha": f(190, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "hishaN": f(190, 2, 120, 160, 5, -4, 50, 66, i); break;
 		case "kaku": f(315, 2, 120, 160, 5, -4, 50, 66, i); break;
+		case "kakuN": f(315, 2, 120, 160, 5, -4, 50, 66, i); break;
 		case "hu": f(435, 310, 120, 155, 3, -6, 50, 66, i); break;
+		case "huN": f(435, 310, 120, 155, 3, -6, 50, 66, i); break;
 		}
 
 		function f(sx, sy, sw, sh, gosaX, gosaY, dw, dh, i) {
@@ -563,6 +574,20 @@ function containObj(elem, objAry) {
 	return false;
 }
 
+/*
+a = 3;
+b = [4,1,6,7,8,3,1];
+console.log( containAry(a, b) ); //#=> true;
+*/
+
+function containAry(elem, ary) {
+	for (var i=0; i<ary.length; ++i) {
+		if (elem == ary[i])
+			return true;
+	}
+	return false;
+}
+
 
 /*
  a = [ {x:0, y:0}, {x:0, y:0}, {x:0, y:0} ];
@@ -628,7 +653,6 @@ $(function() {
 	})
 
 	socket.on('start', function(data, koma) {
-		var msg;
 		DATA = data;
 		KOMA = koma;
 		KOMA.img = new Image();
@@ -636,28 +660,30 @@ $(function() {
 		$("#NAME").css({display: "block"});
 		$("#myKoma").css({display: "block"});
 		$("#enemyKoma").css({display: "block"});
-		if (ME == DATA.turn)
-			msg = "<h1>あなたのターンです</h1>";
-		else
-			msg = "<h1>相手のターンです</h1>";
-		$("#message").html(msg);
+		msgTurn();
 		manager.run();
 		debug(ME);
 	});
 
 	socket.on('update', function(data) {
-		var msg;
-		DATA = data;
-		board.update();
-		komaList.update();
+		update(data);
 		motiGoma.update("myKoma");
 		motiGoma.update("enemyKoma");
-		if (ME == DATA.turn)
-			msg = "<h1>あなたのターンです</h1>";
-		else
-			msg = "<h1>相手のターンです</h1>";
-		$("#message").html(msg);
+		msgTurn();
 		debug(ME);
+	});
+
+	socket.on('naru', function(U) {
+		console.log("ここまで");
+		if ( confirm("成りますか？") ) {
+			console.log("成った");
+			U.koma.name = U.koma.name + "N";
+		} else {
+			console.log("キャンセル");
+		}
+		console.log(U);
+
+		socket.emit('naru', U);
 	});
 
 	socket.on('result', function(winner, data) {
@@ -666,14 +692,27 @@ $(function() {
 			msg = "<h1>勝ち</h1>";
 		else
 			msg = "<h1>負け</h1>";
-		DATA = data;
-		board.update();
-		komaList.update();
+		update(data);
 		$("#NAME").unbind();
 		$("#myKoma").unbind();
 		$("#enemyKoma").unbind();
 		$("#message").html(msg);
 	});
+
+	function update(data) {
+		DATA = data;
+		board.update();
+		komaList.update();
+	}
+	
+	function msgTurn() {
+		var msg;
+		if (ME == DATA.turn)
+			msg = "<h1>あなたのターンです</h1>";
+		else
+			msg = "<h1>相手のターンです</h1>";
+		$("#message").html(msg);
+	}
 });
 
 //駒成る

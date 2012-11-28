@@ -16,13 +16,25 @@
 			gin: [ { x: -1, y: -1 }, { x: 0, y: -1 },
 				   { x: 1, y: -1 }, { x: -1, y: 1 },
 				   { x: 1, y: 1 } ],
+			ginN: [ { x: -1, y: -1 }, { x: 0, y: -1 },
+				   { x: 1, y: -1 }, { x: -1, y: 0 },
+				   { x: 1, y: 0 }, { x: 0, y: 1 } ],
 			uma: [ { x: -1, y: -2 }, { x: 1, y: -2 } ],
+			umaN: [ { x: -1, y: -1 }, { x: 0, y: -1 },
+				   { x: 1, y: -1 }, { x: -1, y: 0 },
+				   { x: 1, y: 0 }, { x: 0, y: 1 } ],
 			yari: [ { x: 100, y: 0 } ],
+			yariN: [ { x: -1, y: -1 }, { x: 0, y: -1 },
+				   { x: 1, y: -1 }, { x: -1, y: 0 },
+				   { x: 1, y: 0 }, { x: 0, y: 1 } ],
 			hisha: [ { x: 200, y: 200 } ],
 			hishaN: [ { x: 201, y: 201 } ],
 			kaku: [ { x: 300, y: 300 } ],
 			kakuN: [ { x: 301, y: 301 } ],
-			hu: [ { x: 0, y: -1 } ]
+			hu: [ { x: 0, y: -1 } ],
+			huN: [ { x: -1, y: -1 }, { x: 0, y: -1 },
+				   { x: 1, y: -1 }, { x: -1, y: 0 },
+				   { x: 1, y: 0 }, { x: 0, y: 1 } ]
 		}
 		this.initialPosition = function() {
 			var ary = new Array;
@@ -128,6 +140,9 @@
 		}
 	}
 
+	//めんどかった
+	var nariKoma = ["gin","uma","yari","hu","hisha","kaku"];
+	var nattaKoma = ["ginN","umaN","yariN","huN","hishaN","kakuN"];
 
 	global.io.sockets.on('connection', function(socket) {
 		var me = socket.store.id;
@@ -155,12 +170,33 @@
 
 		var end = false;
 		socket.on('update', function(U) {
-			//ターンを変える
+			if ( containAry(U.koma.name, nariKoma) && 
+				 ( ((U.moveTo.y > 5) && (me == data.host[0])) ||
+				   ((U.moveTo.y < 3) && (me == data.host[1])) ) )
+				socket.emit('naru', U);
+			turnUpdate();
+			motiUpdate(U);
+			komaUpdate(U);
+			sendData();
+		})
+
+		socket.on('naru', function(U) {
+			komaUpdate(U);
+			sendData();
+		});
+
+		socket.on('disconnect', function() {
+			socket.broadcast.emit('message', 'quit');
+		});
+	
+		function turnUpdate() {
 			if (data.turn == data.host[0])
 				data.turn = data.host[1];
 			else if (data.turn == data.host[1])
 				data.turn = data.host[0];
-			//持ち駒更新
+		}
+
+		function motiUpdate(U) {
 			var myKoma = new Array;
 			for (var i=0; i<data.motiGoma.length; ++i) {
 				if (data.motiGoma[i].host == U.me)
@@ -185,7 +221,20 @@
 					}
 				}
 			} 
-			//盤の駒
+
+		}
+
+		function komaUpdate(U) {
+			if ( containAry(U.koma.name, nattaKoma) ) {
+				for (var i=0; i<data.komaList.length; ++i) {
+					if ( (data.komaList[i].pos.x == U.moveTo.x) &&
+						 (data.komaList[i].pos.y == U.moveTo.y) ) {
+						data.komaList[i].name = U.koma.name;
+						break;
+					}
+				}
+			}
+			
 			for (var i=0; i<data.komaList.length; ++i) {
 				if ( (data.komaList[i].pos.x == U.koma.pos.x) &&
 					 (data.komaList[i].pos.y == U.koma.pos.y) ) {
@@ -194,7 +243,9 @@
 					break;
 				}
 			}
-			//クライアントに更新を伝える
+		}
+
+		function sendData() {
 			if (end) {
 				socket.broadcast.emit('result', me, data);
 				socket.emit('result', me, data);
@@ -202,13 +253,14 @@
 				socket.broadcast.emit('update', data);
 				socket.emit('update', data);
 			}
-		})
+		}
 
-		socket.on('disconnect', function() {
-			socket.broadcast.emit('message', 'quit');
-		});
-
+		function containAry(elem, ary) {
+			for (var i=0; i<ary.length; ++i) {
+				if (elem == ary[i])
+					return true;
+			}
+			return false;
+		}
 	});
-
-
 }).call(this);

@@ -295,6 +295,14 @@ finger.run = function() {
 				}
 				break;
 			case "yari":
+				for (var i=finger.koma.pos.y-1; i>-1; --i) {
+					if ( !myKomaExist(finger.koma.pos.x, i) ) {
+						neiAry.push({ x: finger.koma.pos.x, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x, i) )
+							break;
+					} else
+						break;
+				}
 				break;
 			default:
 				for (var i=0; i<KOMA.name[name].length; ++i) {

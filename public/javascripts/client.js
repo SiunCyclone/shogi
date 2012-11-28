@@ -250,6 +250,49 @@ finger.run = function() {
 				}
 				break;
 			case "kaku":
+				//上
+				var t = 1;
+				for (var i=finger.koma.pos.y-1; i>-1; --i) {
+					console.log(finger.koma.pos.x-t, i);
+					if ( !myKomaExist(finger.koma.pos.x-t, i) ) {
+						neiAry.push({ x: finger.koma.pos.x-t, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x-t, i) )
+							break;
+						++t;
+					} else
+						break;
+				}
+				t = 1;
+				for (var i=finger.koma.pos.y-1; i>-1; --i) {
+					if ( !myKomaExist(finger.koma.pos.x+t, i) ) {
+						neiAry.push({ x: finger.koma.pos.x+t, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x+t, i) )
+							break;
+						++t;
+					} else
+						break;
+				}
+				//下
+				t = 1;
+				for (var i=finger.koma.pos.y+1; i<9; ++i) {
+					if ( !myKomaExist(finger.koma.pos.x-t, i) ) {
+						neiAry.push({ x: finger.koma.pos.x-t, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x-t, i) )
+							break;
+						++t;
+					} else
+						break;
+				}
+				t = 1;
+				for (var i=finger.koma.pos.y+1; i<9; ++i) {
+					if ( !myKomaExist(finger.koma.pos.x+t, i) ) {
+						neiAry.push({ x: finger.koma.pos.x+t, y: i });
+						if ( enemyKomaExist(finger.koma.pos.x+t, i) )
+							break;
+						++t;
+					} else
+						break;
+				}
 				break;
 			case "yari":
 				break;

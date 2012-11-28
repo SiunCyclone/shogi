@@ -26,14 +26,9 @@ var komaList = new ObjectModel();
 var motiGoma = new ObjectModel();
 
 manager.init = function() {
-	console.log(KOMA);
 	board.init(NAME);
 	finger.init(NAME);
 	komaList.init(NAME);
-	motiGoma.init("myKoma");
-	motiGoma.draw();
-	motiGoma.init("enemyKoma");	
-	motiGoma.draw();
 }
 
 manager.run = function() {
@@ -43,7 +38,8 @@ manager.run = function() {
 	function run() {
 		board.update();
 		komaList.update();
-		motiGoma.update();
+		motiGoma.update("myKoma");
+		motiGoma.update("enemyKoma");
 		finger.run();
 	};
 }
@@ -105,6 +101,10 @@ finger.run = function() {
 		finger.move(e);
 	});
 
+	$("#myKoma").mousemove( function(e) {
+		finger.move(e);
+	});
+
 	$("#NAME").on("click", function() {
 		console.log(DATA.turn,"のターンだよん");
 		if (ME != DATA.turn)
@@ -156,7 +156,7 @@ finger.run = function() {
 
 		function putDown() {
 			//動ける範囲なら置く
-			if ( contain(finger.pos, neiMasu()) ) {
+			if ( containObj(finger.pos, neiMasu()) ) {
 				//取れるなら敵駒取る
 				for (var i=0; i<komaList.list.length; ++i) {
 					if ( (ME != komaList.list[i].host) && 
@@ -186,25 +186,6 @@ finger.run = function() {
 				board.update();
 				komaList.draw();
 			}
-			
-			function contain(elem, objAry) {
-				for each (var obj in objAry) {
-					if ( equal(elem, obj) )
-						return true;
-				}
-				return false;
-
-				function equal(a, b) {
-					var flag = true;
-					Object.keys(a).forEach(function(key) {
-						if (a[key] != b[key]) {
-							flag = false;
-							return;
-						}
-					});
-					return flag;
-				}
-			}
 		}
 
 		function neiMasu() {
@@ -232,6 +213,11 @@ finger.run = function() {
 			}
 		}
 	});
+
+	$("#myKoma").on("click", function() {
+		//もし持ち駒の上なら持つ
+		//持ち駒を戻すなら戻す
+	});
 }
 
 
@@ -254,7 +240,6 @@ komaList.init = function(target) {
 komaList.update = function() {
 	this.list = DATA.komaList;
 	this.draw();
-	console.log(this);
 }
 
 komaList.move = function(koma, moveTo) {
@@ -295,23 +280,218 @@ komaList.draw = function() {
 
 motiGoma.init = function(target) {
 	this.initialize(target);
-	this.size = { x: 140, y: 290 };
+	this.size = { x: 120, y: 300 };
 }
 
-motiGoma.update = function() {
+motiGoma.update = function(target) {
+	this.init(target)
 	this.clear();
-	this.draw();
+	this.draw(target);
 }
 
 motiGoma.clear = function() {
 	this.context.clearRect(0, 0, this.size.x, this.size.y);
 }
 
-motiGoma.draw = function() {
+motiGoma.draw = function(target) {
 	this.context.fillStyle = "#BD6600";
 	this.context.fillRect(0, 0, this.size.x, this.size.y);
+
+	var myKoma = new Array;
+	var enemyKoma = new Array;
+	var x, y;
+	for (var i=0; i<DATA.motiGoma.length; ++i) {
+		if (DATA.motiGoma[i].host == ME)
+			myKoma.push(DATA.motiGoma[i]);
+		else
+			enemyKoma.push(DATA.motiGoma[i]);
+	}
+	if (target == "myKoma") {
+		if (myKoma.length > 10) {
+			myKoma = uniqObjAry(myKoma);
+			for (var i=0; i<myKoma.length; ++i) {
+				x = (i%2==0) ? 0 : 1;
+				y = Math.floor(i/2);
+				drawFunc(myKoma[i].name, "g");
+			}
+		} else {
+			for (var i=0; i<DATA.motiGoma.length; ++i) { 
+				if (ME == DATA.motiGoma[i].host)
+					drawFunc(DATA.motiGoma[i].name, "f");
+			}
+		}
+	} else if (target == "enemyKoma") {
+		if (enemyKoma.length > 10) {
+			console.log("敵描画");
+			console.log("enemyKoma bef", enemyKoma);
+			enemyKoma = uniqObjAry(enemyKoma);
+			console.log("enemyKoma af", enemyKoma);
+			for (var i=0; i<enemyKoma.length; ++i) {
+				x = (i%2==0) ? 0 : 1;
+				y = Math.floor(i/2);
+				drawFunc(enemyKoma[i].name, "g");
+			}
+		} else {
+			for (var i=0; i<DATA.motiGoma.length; ++i) { 
+				if (ME != DATA.motiGoma[i].host)
+					drawFunc(DATA.motiGoma[i].name, "f");
+			}
+		}
+	}
+
+	function drawFunc(name, type) {
+		if (type == "f") {
+			switch (name) {
+			case "ou": f(50, 0, 135, 158, 0, -2, 55, 62, i); break;
+			case "kin": f(435, 0, 130, 170, 6, -6, 50, 70, i); break;
+			case "gin": f(50,310, 130, 145, 2, -2, 50, 60, i); break;
+			case "uma": f(190, 310, 120, 148, 6, -4, 47, 62, i); break;
+			case "yari": f(320, 310, 115, 150, 6, -4, 47, 62, i); break;
+			case "hisha": f(190, 2, 120, 160, 5, -4, 50, 66, i); break;
+			case "kaku": f(315, 2, 120, 160, 5, -4, 50, 66, i); break;
+			case "hu": f(435, 310, 120, 155, 3, -6, 50, 66, i); break;
+			}
+		} else if (type == "g") {
+			switch (name) {
+			case "ou": g(50, 0, 135, 158, 0, -2, 27.5, 31, x, y); break;
+			case "kin": g(435, 0, 130, 170, 6, -4, 25, 35, x, y); break;
+			case "gin": g(50,310, 130, 145, 2, -4, 25, 30, x, y); break;
+			case "uma": g(190, 310, 120, 148, 6, -4, 23.5, 31, x, y); break;
+			case "yari": g(320, 310, 115, 150, 6, -4, 23.5, 31, x, y); break;
+			case "hisha": g(190, 2, 120, 160, 5, -4, 25, 33, x, y); break;
+			case "kaku": g(315, 2, 120, 160, 5, -4, 25, 33, x, y); break;
+			case "hu": g(435, 310, 120, 155, 3, -6, 25, 33, x, y); break;
+			}
+		}
+
+		function f(sx, sy, sw, sh, gosaX, gosaY, dw, dh, i) {
+			motiGoma.context.drawImage(KOMA.img, sx, sy, sw, sh,
+									   DATA.motiGoma[i].pos.x * MASU_SIZE + gosaX,
+									   Math.floor(DATA.motiGoma[i].pos.y/2) * MASU_SIZE + gosaY,
+									   dw, dh);
+		}
+
+		function g(sx, sy, sw, sh, gosaX, gosaY, dw, dh, x, y) {
+			motiGoma.context.drawImage(KOMA.img, sx, sy, sw, sh,
+									   x * (MASU_SIZE/2) + gosaX,
+									   y * (MASU_SIZE/2) + gosaY,
+									   dw, dh);
+		}
+	}
+
 }
 
+//==================================================
+
+/*
+ a = { x: 0, y: 0 };
+ b = { x: 0, y: 0 };
+ console.log( equalObj(a, b) ); //#=> true
+ a = { x: 0, y: 0 };
+ b = { y: 0, x: 0 };
+ console.log( equalObj(a, b) ); //#=> true 
+ a = { pos: {x: 0, y: 0}, t: 0 };
+ b = { pos: {x: 0, y: 0}, t: 0 };
+ console.log( equalObj(a, b) ); //#=> true 
+ a = { x: 0, y: 0 };
+ b = { x: 0 };
+ console.log( equalObj(a, b) ); //#=> false
+ a = { x: 0, y: 0 };
+ b = { x: 0, y: 1 };
+ console.log( equalObj(a, b) ); //#=> false
+ a = { s: 0, y: 0 };
+ b = { x: 0, y: 0 };
+ console.log( equalObj(a, b) ); //#=> false
+ a = { x: 0, y: 0 };
+ b = { x: 0, y: 0, z: 0};
+ console.log( equalObj(a, b) ); //#=> false
+ a = { pos: {x: 0, y: 0}, t: 0 };
+ b = { pos: {x: 0, y: 1}, t: 0 };
+ console.log( equalObj(a, b) ); //#=> false 
+*/
+function equalObj(a, b) {
+	var flag = true;
+	if (Object.keys(a).length != Object.keys(b).length)
+		return false 
+	Object.keys(a).forEach( function(key) {
+		if ( (typeof(a[key]) == "object") &&
+		     (typeof(b[key]) == "object") ){
+			flag = equalObj(a[key], b[key]);
+			return;
+		}
+		if (a[key] != b[key]) {
+			flag = false;
+			return;
+		}
+	});
+	return flag;
+}
+
+/*
+ a = [1, 2, 3];
+ b = [1, 2, 3];
+ console.log( equalAry(a, b) ); //#=> true
+ a = [1, 2, 3];
+ b = [1, 2];
+ console.log( equalAry(a, b) ); //#=> false
+ a = [1, 2, 3];
+ b = [1, 5, 3];
+ console.log( equalAry(a, b) ); //#=> false
+ a = [1, 2, 3];
+ b = [3, 2, 1];
+ console.log( equalAry(a, b) ) //#=> false
+*/
+function equalAry(a, b) {
+	if (a.length != b.length) return false;
+	for (var i=0; i<a.length; ++i) {
+		if (a[i] != b[i])
+			return false;
+	}
+	return true;
+}
+
+function containObj(elem, objAry) {
+	for each (var obj in objAry) {
+		if ( equalObj(elem, obj) )
+			return true;
+	}
+	return false;
+}
+
+
+/*
+ a = [ {x:0, y:0}, {x:0, y:0}, {x:0, y:0} ];
+ console.log( uniqObjAry(a) ) //#=> [ {x:0, y:0} ];
+ a = [ {x:0, y:0}, {y:0, x:0}, {y:0, x:0} ];
+ console.log( uniqObjAry(a) ) //#=> [ {x:0, y:0} ];
+ a = [ {x:0, y:0, z:0}, {x:0, y:0}, {x:0, y:0} ];
+ console.log( uniqObjAry(a) ) //#=> [ {x:0, y:0, z:0}, {x:0, y:0} ];
+ a = [ {x:0, y:0}, {x:0, y:1}, {x:0, y:0} ];
+ console.log( uniqObjAry(a) ) //#=> [ {x:0, y:0}, {x:0, y:1} ];
+ a = [ {pos: {x:0, y:1}, t:0}, {x:0, y:1}, {x:0, y:0}, {pos: {x:0, y:0}, t:0} ];
+ console.log( uniqObjAry(a) ) //#=> [ {pos: {x:0, y:0}, t:0}, {x:0, y:0}, {x:0, y:1} ];
+*/
+function uniqObjAry(ary) {
+	var list = new Array;
+	var flag = false;
+	for (var i=0; i<ary.length; ++i) {
+		for (var o=0; o<ary.length; ++o) {
+			if ( (o == ary.length-1) && !containObj(ary[i], list) ) {
+				list.push(ary[i]);
+				flag = true
+				break;
+			}
+			if ( equalObj(ary[i], ary[o])  ||
+				 !equalAry(Object.keys(ary[i]), Object.keys(ary[o])) )
+				continue;
+			flag = true;
+		}
+		if (flag)
+			continue;
+		list.push(ary[i]);
+	}
+	return list;
+}
 
 //==================================================
 
@@ -339,6 +519,7 @@ $(function() {
 			$("#enemyKoma").css({display: "none"})
 						   .unbind();
 			manager.clear();
+			socket.emit('message', 'quit');
 			break;
 		}
 	})
@@ -360,6 +541,8 @@ $(function() {
 		DATA = data;
 		board.update();
 		komaList.update();
+		motiGoma.update("myKoma");
+		motiGoma.update("enemyKoma");
 	});
 });
 

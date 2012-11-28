@@ -126,12 +126,29 @@
 		}
 	}
 
+
 	global.io.sockets.on('connection', function(socket) {
 		var me = socket.store.id;
 		data.host = Object.keys(socket.manager.roomClients)
 		console.log("メンバー増える",Object.keys(socket.manager.roomClients));
+
+		if (me == data.host[0]) {
+			//data.motiGoma.push( { pos: {x: 0, y: 0}, name: "kin", host: me } );
+		} else {
+			data.motiGoma.push( { pos: {x: 0, y: 0}, name: "uma", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 1}, name: "kin", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 2}, name: "gin", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 3}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 4}, name: "hu", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 5}, name: "kin", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 6}, name: "gin", host: me } );
+			data.motiGoma.push( { pos: {x: 1, y: 7}, name: "ou", host: me } );
+			data.motiGoma.push( { pos: {x: 0, y: 8}, name: "hu", host: me } );
+		//	data.motiGoma.push( { pos: {x: 1, y: 9}, name: "ou", host: me } );
+		}
 		
 		socket.emit('init', me);
+
 
 		if (data.host.length < 2) {
 			socket.emit('message', 'search');
@@ -143,6 +160,13 @@
 			console.log(data.turn,"のターン");
 		}
 
+		socket.on('message', function(msg) {
+			data.komaList = new Array;
+			data.motiGoma = new Array;
+			data.host = new Array;
+			data.turn = null;
+		});
+
 		socket.on('update', function(U) {
 			//ターンを変える
 			if (data.turn == data.host[0])
@@ -150,12 +174,17 @@
 			else if (data.turn == data.host[1])
 				data.turn = data.host[0];
 			//盤の駒、持ち駒更新
+			var myKoma = new Array;
+			for (var i=0; i<data.motiGoma.length; ++i) {
+				if (data.motiGoma[i].host == U.me)
+					myKoma.push(data.motiGoma[i]);
+			}
 			if (U.getKoma) {
 				for (var i=0; i<data.komaList.length; ++i) {
 					if ( (data.komaList[i].pos.x == U.moveTo.x) &&
 						 (data.komaList[i].pos.y == U.moveTo.y) ) {
-						data.komaList[i].pos.x = CENTER.x; //しなくてもいい
-						data.komaList[i].pos.y = CENTER.y;
+						data.komaList[i].pos.x = (myKoma.length%2==0) ? 0 : 1;
+						data.komaList[i].pos.y = myKoma.length;
 						data.komaList[i].host = U.me;
 						data.motiGoma.push(data.komaList[i]);
 						data.komaList.splice(i, 1);

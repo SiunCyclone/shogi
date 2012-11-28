@@ -18,6 +18,7 @@ var NAME = "NAME";
 var MASU_SIZE = 60;
 var MASU_NUM = 9;
 var ME, KOMA, DATA;
+var CENTER = { x: 4, y: 4 }; //なんかきもい
 
 var manager = new ObjectModel();
 var board = new ObjectModel();
@@ -57,7 +58,7 @@ manager.clear = function() {
 
 board.init = function(target) {
 	this.initialize(target);
-	this.size = { x: 540, y: 540 };
+	this.size = { x: this.canvas.width, y: this.canvas.height};
 }
 
 board.update = function() {
@@ -132,7 +133,7 @@ finger.run = function() {
 				neighbor();
 				komaList.draw();
 
-				// 飛車とか特別なのは未実装
+				// #TODO 飛車とか特別なのは未実装
 				function current() {
 					finger.context.fillStyle = "#FFD2FF";
 					finger.context.fillRect( (finger.koma.pos.x * MASU_SIZE) + 1,
@@ -162,6 +163,7 @@ finger.run = function() {
 					if ( (ME != komaList.list[i].host) && 
 						 (finger.pos.x == komaList.list[i].pos.x) &&
 						 (finger.pos.y == komaList.list[i].pos.y) ) {
+						finger.rotate();
 						socket.emit('update', { koma: finger.koma,
 												moveTo: finger.pos,
 												getKoma: true,
@@ -170,6 +172,7 @@ finger.run = function() {
 						return;
 					}
 				}
+				finger.rotate();
 				socket.emit('update', { koma: finger.koma,
 										moveTo: finger.pos,
 										getKoma: false,
@@ -219,6 +222,14 @@ finger.run = function() {
 	});
 }
 
+finger.rotate = function() {
+	if (ME == DATA.host[0]) {
+		this.pos.x = mirrorX(this.pos.x, this.pos.y);
+		this.pos.y = mirrorY(this.pos.x, this.pos.y);
+		this.koma.pos.x = mirrorX(this.koma.pos.x, this.koma.pos.y);
+		this.koma.pos.y = mirrorY(this.koma.pos.x, this.koma.pos.y);
+	}
+}
 
 finger.move = function(e) {
 	this.pos.x = Math.floor( (e.pageX - $("#NAME").offset()["left"]) / MASU_SIZE );
@@ -231,6 +242,16 @@ finger.move = function(e) {
 
 //==================================================
 
+function mirrorX(x, y) {
+	return Math.round( (x - CENTER.x) * Math.cos(Math.PI) - 
+		   (y - CENTER.y) * Math.sin(Math.PI) + CENTER.x );
+}
+
+function mirrorY(x, y) {
+	return Math.round( (x - CENTER.x) * Math.sin(Math.PI) +
+		   (y - CENTER.y) * Math.cos(Math.PI) + CENTER.y );
+}
+
 komaList.init = function(target) {
 	this.initialize(target);
 	this.list = DATA.komaList;
@@ -238,7 +259,17 @@ komaList.init = function(target) {
 
 komaList.update = function() {
 	this.list = DATA.komaList;
+	this.rotate();
 	this.draw();
+}
+
+komaList.rotate = function() {
+	if (ME == DATA.host[0]) {
+		for (var i=0; i<this.list.length; ++i) {
+			this.list[i].pos.x = mirrorX(this.list[i].pos.x, this.list[i].pos.y);
+			this.list[i].pos.y = mirrorY(this.list[i].pos.x, this.list[i].pos.y);
+		}
+	}
 }
 
 komaList.move = function(koma, moveTo) {
@@ -253,7 +284,6 @@ komaList.move = function(koma, moveTo) {
 }
 
 komaList.draw = function() {
-	//敵は反転させて。
 	for (var i=0; i<this.list.length; ++i) {
 		switch (this.list[i].name) {
 		case "ou": drawFunc(50, 0, 135, 158, 0, -2, 55, 62, i); break;
@@ -268,10 +298,21 @@ komaList.draw = function() {
 	}
 
 	function drawFunc(sx, sy, sw, sh, gosaX, gosaY, dw, dh, i) {
+		var x = komaList.list[i].pos.x;
+		var y = komaList.list[i].pos.y;
+		komaList.context.save();
+		if (ME != komaList.list[i].host) {
+			komaList.context.translate((komaList.list[i].pos.x+1) * MASU_SIZE,
+									   (komaList.list[i].pos.y+1) * MASU_SIZE);
+			komaList.context.rotate(Math.PI);
+			x = 0;
+			y = 0;
+		}
 		komaList.context.drawImage(KOMA.img, sx, sy, sw, sh,
-								   komaList.list[i].pos.x * MASU_SIZE + gosaX,
-								   komaList.list[i].pos.y * MASU_SIZE + gosaY,
+								   x * MASU_SIZE + gosaX,
+								   y * MASU_SIZE + gosaY,
 								   dw, dh);
+		komaList.context.restore();
 	}
 }
 
@@ -279,7 +320,7 @@ komaList.draw = function() {
 
 motiGoma.init = function(target) {
 	this.initialize(target);
-	this.size = { x: 120, y: 300 };
+	this.size = { x: this.canvas.width, y: this.canvas.height };
 }
 
 motiGoma.update = function(target) {
@@ -496,6 +537,7 @@ $(function() {
 		komaList.update();
 		motiGoma.update("myKoma");
 		motiGoma.update("enemyKoma");
+		debug(ME);
 	});
 });
 

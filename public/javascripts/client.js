@@ -26,6 +26,16 @@ var finger = new ObjectModel();
 var komaList = new ObjectModel();
 var motiGoma = new ObjectModel();
 
+function mirrorX(x, y) {
+	return Math.round( (x - CENTER.x) * Math.cos(Math.PI) - 
+		   (y - CENTER.y) * Math.sin(Math.PI) + CENTER.x );
+}
+
+function mirrorY(x, y) {
+	return Math.round( (x - CENTER.x) * Math.sin(Math.PI) +
+		   (y - CENTER.y) * Math.cos(Math.PI) + CENTER.y );
+}
+
 manager.init = function() {
 	board.init(NAME);
 	finger.init(NAME);
@@ -242,15 +252,6 @@ finger.move = function(e) {
 
 //==================================================
 
-function mirrorX(x, y) {
-	return Math.round( (x - CENTER.x) * Math.cos(Math.PI) - 
-		   (y - CENTER.y) * Math.sin(Math.PI) + CENTER.x );
-}
-
-function mirrorY(x, y) {
-	return Math.round( (x - CENTER.x) * Math.sin(Math.PI) +
-		   (y - CENTER.y) * Math.cos(Math.PI) + CENTER.y );
-}
 
 komaList.init = function(target) {
 	this.initialize(target);
@@ -344,8 +345,8 @@ motiGoma.draw = function(target) {
 		else if ( (target == "enemyKoma") && (ME != DATA.motiGoma[i].host) )
 			myKoma.push(DATA.motiGoma[i]);
 	}
-	for (var i=0; i<DATA.motiGoma.length; ++i)
-		drawFunc(DATA.motiGoma[i].name, i);
+	for (var i=0; i<myKoma.length; ++i)
+		drawFunc(myKoma[i].name, i);
 
 	function drawFunc(name, i) {
 		switch (name) {
@@ -367,8 +368,8 @@ motiGoma.draw = function(target) {
 				size = MASU_SIZE/2;
 			}
 			motiGoma.context.drawImage(KOMA.img, sx, sy, sw, sh,
-									   DATA.motiGoma[i].pos.x * size + gosaX,
-									   DATA.motiGoma[i].pos.y * size + gosaY,
+									   myKoma[i].pos.x * size + gosaX,
+									   myKoma[i].pos.y * size + gosaY,
 									   dw, dh);
 		}
 	}
@@ -538,6 +539,7 @@ $(function() {
 		motiGoma.update("myKoma");
 		motiGoma.update("enemyKoma");
 		debug(ME);
+		console.log(DATA.motiGoma);
 	});
 });
 

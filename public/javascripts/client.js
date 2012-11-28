@@ -119,10 +119,8 @@ finger.run = function() {
 	});
 
 	$("#NAME").on("click", function() {
-		console.log(DATA.turn,"のターンだよん");
 		if (ME != DATA.turn)
 			return;
-		console.log("君のターンだ!!!!");
 		
 		if (finger.haveKoma)
 			putDown();
@@ -156,7 +154,7 @@ finger.run = function() {
 				
 				function neighbor() {
 					var neiAry = neiMasu();
-					console.log("neiAry", neiAry); //debug
+					//console.log("neiAry", neiAry); //debug
 					for (var i=0; i<neiAry.length; ++i) {
 						finger.context.fillStyle = "#C0C0C0";
 						finger.context.fillRect(neiAry[i].x * MASU_SIZE + 1,
@@ -253,7 +251,6 @@ finger.run = function() {
 				//上
 				var t = 1;
 				for (var i=finger.koma.pos.y-1; i>-1; --i) {
-					console.log(finger.koma.pos.x-t, i);
 					if ( !myKomaExist(finger.koma.pos.x-t, i) ) {
 						neiAry.push({ x: finger.koma.pos.x-t, y: i });
 						if ( enemyKomaExist(finger.koma.pos.x-t, i) )
@@ -617,9 +614,7 @@ $(function() {
 			$("#enemyKoma").css({display: "none"});
 			break;
 		case "quit":
-			$("#message").css({display: "block"})
-						 .html("<h1>相手が対戦をやめました</1>")
-						 .append("<h1>新しい対戦相手を探しています...</h1>");
+			$("#message").html("<h2>相手が対戦をやめました<br>新しい対戦相手を探しています...</h2>")
 			$("#NAME").css({display: "none"})
 					  .unbind();
 			$("#myKoma").css({display: "none"})
@@ -633,6 +628,7 @@ $(function() {
 	})
 
 	socket.on('start', function(data, koma) {
+		var msg;
 		DATA = data;
 		KOMA = koma;
 		KOMA.img = new Image();
@@ -640,25 +636,45 @@ $(function() {
 		$("#NAME").css({display: "block"});
 		$("#myKoma").css({display: "block"});
 		$("#enemyKoma").css({display: "block"});
-		$("#message").css({display: "none"});
+		if (ME == DATA.turn)
+			msg = "<h1>あなたのターンです</h1>";
+		else
+			msg = "<h1>相手のターンです</h1>";
+		$("#message").html(msg);
 		manager.run();
 		debug(ME);
 	});
 
 	socket.on('update', function(data) {
+		var msg;
 		DATA = data;
 		board.update();
 		komaList.update();
 		motiGoma.update("myKoma");
 		motiGoma.update("enemyKoma");
+		if (ME == DATA.turn)
+			msg = "<h1>あなたのターンです</h1>";
+		else
+			msg = "<h1>相手のターンです</h1>";
+		$("#message").html(msg);
 		debug(ME);
-		console.log(DATA.motiGoma);
+	});
+
+	socket.on('result', function(winner, data) {
+		var msg;
+		if (ME == winner)
+			msg = "<h1>勝ち</h1>";
+		else
+			msg = "<h1>負け</h1>";
+		DATA = data;
+		board.update();
+		komaList.update();
+		$("#NAME").unbind();
+		$("#myKoma").unbind();
+		$("#enemyKoma").unbind();
+		$("#message").html(msg);
 	});
 });
 
 //駒成る
-//王をとったら終わり
-//飛車、角とか
-
-//どっちのターンか表示
 

@@ -8,7 +8,7 @@ body {
 	border: 4px solid #000000;
 	top: 20px;
 	width: 850px;
-	height: 600px;
+	height: 700px;
 }
 
 #NAME {
@@ -34,6 +34,16 @@ body {
 	top: 290px;
 	left: 710px;
 	border: 4px solid #449922;
+}
+
+#message {
+	position: absolute;
+	text-align: center;
+	top: 590px;
+	left: 150px;
+	width: 540px;
+	height: 100px;
+	border: 4px solid #331122;
 }
 
 

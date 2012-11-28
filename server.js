@@ -153,6 +153,7 @@
 			data.turn = null;
 		});
 
+		var end = false;
 		socket.on('update', function(U) {
 			//ターンを変える
 			if (data.turn == data.host[0])
@@ -169,6 +170,8 @@
 				for (var i=0; i<data.komaList.length; ++i) {
 					if ( (data.komaList[i].pos.x == U.moveTo.x) &&
 						 (data.komaList[i].pos.y == U.moveTo.y) ) {
+						if (data.komaList[i].name == "ou")
+							end = true;
 						data.komaList[i].pos.x = (myKoma.length<20) ?
 												 ( (myKoma.length%2==0) ? 0 : 1 ) :
 												 ( (myKoma.length%2==0) ? 2 : 3 );
@@ -192,8 +195,13 @@
 				}
 			}
 			//クライアントに更新を伝える
-			socket.broadcast.emit('update', data);
-			socket.emit('update', data);
+			if (end) {
+				socket.broadcast.emit('result', me, data);
+				socket.emit('result', me, data);
+			} else { 
+				socket.broadcast.emit('update', data);
+				socket.emit('update', data);
+			}
 		})
 
 		socket.on('disconnect', function() {

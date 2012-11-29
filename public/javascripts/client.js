@@ -9,10 +9,6 @@ ObjectModel.prototype.initialize = function(target) {
 	this.context = this.canvas.getContext("2d");
 }
 
-function debug(data) {
-	$("#debug").html(data);
-}
-
 var socket = io.connect('http://localhost');
 var NAME = "NAME"
   , MASU_SIZE = 60
@@ -107,15 +103,75 @@ finger.init = function(target) {
 	this.pos = { x: 4, y: 4 };
 	this.koma = false;
 	this.haveKoma = false;
+	this.moti = false;
 }
 
 finger.run = function() {
 	$("#NAME").mousemove( function(e) {
-		finger.move(e);
+		finger.move(e, "board");
+		if (finger.moti) {
+			board.update();
+			finger.context.fillStyle = "#FFD2FF";
+			finger.context.fillRect( (finger.pos.x * MASU_SIZE) + 1,
+									 (finger.pos.y * MASU_SIZE) + 1,
+									 MASU_SIZE - 2, MASU_SIZE - 2);
+			finger.context.fill();
+			komaList.draw();
+			//置ける所を描画
+			//画像アルファ掛けてみたい
+		}
 	});
 
 	$("#myKoma").mousemove( function(e) {
-		finger.move(e);
+		finger.move(e, "moti");
+	});
+
+	$("#myKoma").on("click", function() {
+		if (ME != DATA.turn)
+			return;
+
+		if (finger.haveKoma) {
+			//戻す
+			if ( (finger.pos.x == finger.koma.pos.x) &&
+				 (finger.pos.y == finger.koma.pos.y) ) {
+				finger.koma = false;
+				finger.haveKoma = false;
+				finger.moti = false;
+				board.update();
+				motiGoma.init("myKoma");
+				motiGoma.drawBoard();
+				motiGoma.drawKoma("myKoma");
+				komaList.draw();
+			}
+		} else {
+			//掴む
+			for (var i=0; i<motiGoma.myKoma.length; ++i) {
+				if ( (finger.pos.x == motiGoma.myKoma[i].pos.x) &&
+					 (finger.pos.y == motiGoma.myKoma[i].pos.y) ) {
+					finger.koma = motiGoma.myKoma[i];
+					finger.haveKoma = true;
+					finger.moti = true;
+					curdraw();
+				}
+			}
+		}
+		console.log(finger.koma);
+
+		function curdraw() {
+			var size = MASU_SIZE;
+			if (motiGoma.myKoma.length>10)
+				size = MASU_SIZE/2;
+			finger.initialize("myKoma");
+			motiGoma.init("myKoma");
+			motiGoma.drawBoard();
+			finger.context.fillStyle = "#00E0E0";
+			finger.context.fillRect( (finger.koma.pos.x * size) + 1,
+									 (finger.koma.pos.y * size) + 1,
+									 size - 2, size - 2);
+			finger.context.fill();
+			motiGoma.drawKoma("myKoma");
+			finger.initialize("NAME");
+		}
 	});
 
 	$("#NAME").on("click", function() {
@@ -126,6 +182,9 @@ finger.run = function() {
 			putDown();
 		else
 			getKoma();
+
+		//console.log("finger.haveKoma", finger.haveKoma);
+		//console.log("finger.koma", finger.koma);
 
 		function getKoma() {
 			for (var i=0; i<komaList.list.length; ++i) {
@@ -144,7 +203,7 @@ finger.run = function() {
 				komaList.draw();
 
 				function current() {
-					finger.context.fillStyle = "#FFD2FF";
+					finger.context.fillStyle = "#00E0E0";
 					finger.context.fillRect( (finger.koma.pos.x * MASU_SIZE) + 1,
 											 (finger.koma.pos.y * MASU_SIZE) + 1,
 											 MASU_SIZE - 2, MASU_SIZE - 2);
@@ -166,6 +225,18 @@ finger.run = function() {
 		}
 
 		function putDown() {
+			if ( finger.moti && canPut() ) {
+				finger.rotate();
+				socket.emit('update', { koma: finger.koma,
+										moveTo: finger.pos,
+										getKoma: false,
+										moti: true,
+										me: ME });
+				finger.koma = false;
+				finger.haveKoma = false;
+				finger.moti = false;
+				return;
+			}
 			//動ける範囲なら置く
 			if ( containObj(finger.pos, neiMasu()) ) {
 				//取れるなら敵駒取る
@@ -177,6 +248,7 @@ finger.run = function() {
 						socket.emit('update', { koma: finger.koma,
 												moveTo: finger.pos,
 												getKoma: true,
+												moti: false,
 												me: ME });
 						finger.haveKoma = false;
 						return;
@@ -186,6 +258,7 @@ finger.run = function() {
 				socket.emit('update', { koma: finger.koma,
 										moveTo: finger.pos,
 										getKoma: false,
+										moti: false,
 										me: ME });
 				finger.haveKoma = false;
 				return;
@@ -199,6 +272,25 @@ finger.run = function() {
 				board.update();
 				komaList.draw();
 			}
+		}
+		
+		function canPut() {
+			for (var i=0; i<komaList.list.length; ++i) {
+				if ( (finger.koma.name == "hu") &&
+					 (komaList.list[i].name == "hu") &&
+					 (finger.pos.x == komaList.list[i].pos.x) && 
+					 (ME == komaList.list[i].host) ) {
+					$("#message").html("<h1>二歩です</h1>");
+					return false;
+				}
+				if ( (finger.pos.x == komaList.list[i].pos.x) &&
+					 (finger.pos.y == komaList.list[i].pos.y) ) {
+					console.log("finger, list", finger.pos, komaList.list[i]);
+					$("#message").html("<h1>他の駒があります</h1>");
+					return false;
+				}
+			}
+			return true;
 		}
 
 		function neiMasu() {
@@ -363,11 +455,6 @@ finger.run = function() {
 			}
 		}
 	});
-
-	$("#myKoma").on("click", function() {
-		//もし持ち駒の上なら持つ
-		//持ち駒を戻すなら戻す
-	});
 }
 
 finger.rotate = function() {
@@ -379,13 +466,32 @@ finger.rotate = function() {
 	}
 }
 
-finger.move = function(e) {
-	this.pos.x = Math.floor( (e.pageX - $("#NAME").offset()["left"]) / MASU_SIZE );
-	this.pos.y = Math.floor( (e.pageY - $("#NAME").offset()["top"]) / MASU_SIZE );
-	if (this.pos.x > 8)
-		this.pos.x = 8
-	if (this.pos.y > 8)
-		this.pos.y = 8
+finger.move = function(e, type) {
+	if (type == "board") {
+		this.pos.x = Math.floor( (e.pageX - $("#NAME").offset()["left"]) / MASU_SIZE );
+		this.pos.y = Math.floor( (e.pageY - $("#NAME").offset()["top"]) / MASU_SIZE );
+		if (this.pos.x > 8)
+			this.pos.x = 8;
+		if (this.pos.y > 8)
+			this.pos.y = 8;
+	}
+	else if (type == "moti") {
+		if (motiGoma.myKoma.length <= 10) {
+			this.pos.x = Math.floor( (e.pageX - $("#myKoma").offset()["left"]) / MASU_SIZE );
+			this.pos.y = Math.floor( (e.pageY - $("#myKoma").offset()["top"]) / MASU_SIZE );
+			if (this.pos.x > 1)
+				this.pos.x = 1;
+			if (this.pos.y > 4)
+				this.pos.y = 4;
+		} else {
+			this.pos.x = Math.floor( (e.pageX - $("#myKoma").offset()["left"]) / (MASU_SIZE/2) );
+			this.pos.y = Math.floor( (e.pageY - $("#myKoma").offset()["top"]) / (MASU_SIZE/2) );
+			if (this.pos.x > 3)
+				this.pos.x = 3;
+			if (this.pos.y > 9)
+				this.pos.y = 9;
+		}
+	}
 }
 
 //==================================================
@@ -466,6 +572,14 @@ komaList.draw = function() {
 motiGoma.init = function(target) {
 	this.initialize(target);
 	this.size = { x: this.canvas.width, y: this.canvas.height };
+	this.myKoma = new Array;
+	this.enemyKoma = new Array;
+	for (var i=0; i<DATA.motiGoma.length; ++i) {
+		if (ME == DATA.motiGoma[i].host)
+			this.myKoma.push(DATA.motiGoma[i]);
+		else
+			this.enemyKoma.push(DATA.motiGoma[i]);
+	}
 }
 
 motiGoma.update = function(target) {
@@ -478,52 +592,58 @@ motiGoma.clear = function() {
 	this.context.clearRect(0, 0, this.size.x, this.size.y);
 }
 
-motiGoma.draw = function(target) {
+motiGoma.drawBoard = function() {
 	this.context.fillStyle = "#BD6600";
 	this.context.fillRect(0, 0, this.size.x, this.size.y);
+}
 
-	var myKoma = new Array;
-	for (var i=0; i<DATA.motiGoma.length; ++i) {
-		if ( (target == "myKoma") && (ME == DATA.motiGoma[i].host) )
-			myKoma.push(DATA.motiGoma[i]);
-		else if ( (target == "enemyKoma") && (ME != DATA.motiGoma[i].host) )
-			myKoma.push(DATA.motiGoma[i]);
+motiGoma.drawKoma = function(target) {
+	if (target == "myKoma") {
+		this.init(target);
+		for (var i=0; i<this.myKoma.length; ++i)
+			drawFunc(this.myKoma, i);
+	} else if (target == "enemyKoma") {
+		this.init(target);
+		for (var i=0; i<this.enemyKoma.length; ++i)
+			drawFunc(this.enemyKoma, i);
 	}
-	for (var i=0; i<myKoma.length; ++i)
-		drawFunc(myKoma[i].name, i);
 
-	function drawFunc(name, i) {
-		switch (name) {
-		case "ou": f(50, 0, 135, 158, 0, -2, 55, 62, i); break;
-		case "kin": f(435, 0, 130, 170, 6, -6, 50, 70, i); break;
-		case "gin": f(50, 310, 130, 145, 2, -2, 50, 60, i); break;
-		case "ginN": f(50, 310, 130, 145, 2, -2, 50, 60, i); break;
-		case "uma": f(190, 310, 120, 148, 6, -4, 47, 62, i); break;
-		case "umaN": f(190, 310, 120, 148, 6, -4, 47, 62, i); break;
-		case "yari": f(320, 310, 115, 150, 6, -4, 47, 62, i); break;
-		case "yariN": f(320, 310, 115, 150, 6, -4, 47, 62, i); break;
-		case "hisha": f(190, 2, 120, 160, 5, -4, 50, 66, i); break;
-		case "hishaN": f(190, 2, 120, 160, 5, -4, 50, 66, i); break;
-		case "kaku": f(315, 2, 120, 160, 5, -4, 50, 66, i); break;
-		case "kakuN": f(315, 2, 120, 160, 5, -4, 50, 66, i); break;
-		case "hu": f(435, 310, 120, 155, 3, -6, 50, 66, i); break;
-		case "huN": f(435, 310, 120, 155, 3, -6, 50, 66, i); break;
+	function drawFunc(koma, i) {
+		switch (koma[i].name) {
+		case "ou": f(50, 0, 135, 158, 0, -2, 55, 62, i, koma); break;
+		case "kin": f(435, 0, 130, 170, 6, -6, 50, 70, i, koma); break;
+		case "gin": f(50, 310, 130, 145, 2, -2, 50, 60, i, koma); break;
+		case "ginN": f(50, 310, 130, 145, 2, -2, 50, 60, i, koma); break;
+		case "uma": f(190, 310, 120, 148, 6, -4, 47, 62, i, koma); break;
+		case "umaN": f(190, 310, 120, 148, 6, -4, 47, 62, i, koma); break;
+		case "yari": f(320, 310, 115, 150, 6, -4, 47, 62, i, koma); break;
+		case "yariN": f(320, 310, 115, 150, 6, -4, 47, 62, i, koma); break;
+		case "hisha": f(190, 2, 120, 160, 5, -4, 50, 66, i, koma); break;
+		case "hishaN": f(190, 2, 120, 160, 5, -4, 50, 66, i, koma); break;
+		case "kaku": f(315, 2, 120, 160, 5, -4, 50, 66, i, koma); break;
+		case "kakuN": f(315, 2, 120, 160, 5, -4, 50, 66, i, koma); break;
+		case "hu": f(435, 310, 120, 155, 3, -6, 50, 66, i, koma); break;
+		case "huN": f(435, 310, 120, 155, 3, -6, 50, 66, i, koma); break;
 		}
 
-		function f(sx, sy, sw, sh, gosaX, gosaY, dw, dh, i) {
+		function f(sx, sy, sw, sh, gosaX, gosaY, dw, dh, i, koma) {
 			var size = MASU_SIZE;
-			if (myKoma.length>10) {
+			if (koma.length>10) {
 				dw = dw/2;
 				dh = dh/2;
 				size = MASU_SIZE/2;
 			}
 			motiGoma.context.drawImage(KOMA.img, sx, sy, sw, sh,
-									   myKoma[i].pos.x * size + gosaX,
-									   myKoma[i].pos.y * size + gosaY,
+									   koma[i].pos.x * size + gosaX,
+									   koma[i].pos.y * size + gosaY,
 									   dw, dh);
 		}
 	}
+}
 
+motiGoma.draw = function(target) {
+	this.drawBoard();
+	this.drawKoma(target);
 }
 
 //==================================================
@@ -691,7 +811,6 @@ $(function() {
 		$("#enemyKoma").css({display: "block"});
 		msgTurn();
 		manager.run();
-		debug(ME);
 	});
 
 	socket.on('update', function(data) {
@@ -699,19 +818,11 @@ $(function() {
 		motiGoma.update("myKoma");
 		motiGoma.update("enemyKoma");
 		msgTurn();
-		debug(ME);
 	});
 
 	socket.on('naru', function(U) {
-		console.log("ここまで");
-		if ( confirm("成りますか？") ) {
-			console.log("成った");
+		if ( confirm("成りますか？") )
 			U.koma.name = U.koma.name + "N";
-		} else {
-			console.log("キャンセル");
-		}
-		console.log(U);
-
 		socket.emit('naru', U);
 	});
 
@@ -743,6 +854,4 @@ $(function() {
 		$("#message").html(msg);
 	}
 });
-
-//駒成る
 

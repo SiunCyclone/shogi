@@ -46,4 +46,11 @@ body {
 	border: 4px solid #331122;
 }
 
+#debug {
+	position: absolute;
+	top: 400px;
+	left: 0px;
+	border: 4px solid #331122;
+}
+
 

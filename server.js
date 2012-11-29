@@ -141,185 +141,215 @@
 	//めんどかった
 	var nariKoma = ["gin","uma","yari","hu","hisha","kaku"];
 	var nattaKoma = ["ginN","umaN","yariN","huN","hishaN","kakuN"];
-
+	//var hostList = new Array;
+	var me;
 
 	global.io.sockets.on('connection', function(socket) {
-		var me = socket.store.id;
-		data.host = Object.keys(socket.manager.roomClients)
-		console.log("メンバー増える",Object.keys(socket.manager.roomClients));
+		//hostList = Object.keys(socket.manager.roomClients)
+	});
 
-		socket.emit('init', me);
+	var shogi = global.io
+		.of('/shogi')
+		.on('connection', function(socket) {
+			socket.emit('visit');
 
-		if (data.host.length < 2) {
-			socket.emit('message', 'search');
-		} else if (data.host.length == 2) {
-			data.turn = data.host[(Math.random() * 2 | 0)];
-			data.komaList = KOMA.initialPosition();
-			socket.broadcast.emit('start', data, KOMA);
-			socket.emit('start', data, KOMA);
-			console.log(data.turn,"のターン");
-		}
+			socket.on('enter', function() {
+				if ( playing() )
+					socket.emit('notEnter');
+				else
+					socket.emit('enter');
+			});
 
-		socket.on('message', function(msg) {
-			data.komaList = new Array;
-			data.motiGoma = new Array;
-			data.host = new Array;
-			data.turn = null;
-		});
-
-		var end = false;
-		socket.on('update', function(U) {
-			if ( !U.moti && containAry(U.koma.name, nariKoma) && 
-				 ( ((U.moveTo.y > 5) && (me == data.host[0])) ||
-				   ((U.moveTo.y < 3) && (me == data.host[1])) ) ) {
-				socket.emit('naru', U);
-				return;
+			function playing() {
+				if (data.host.length < 2)
+					return false;
+				return true;
 			}
-			turnUpdate();
-			motiUpdate(U);
-			komaUpdate(U);
-			sendData();
-		})
+	});
 
-		socket.on('naru', function(U) {
-			turnUpdate();
-			motiUpdate(U);
-			komaUpdate(U);
-			sendData();
-		});
+	var room = global.io
+		.of('/shogi/room')
+		.on('connection', function(socket) {
+			me = socket.store.id;
+			if ( !containAry(me, data.host) )
+				data.host.push(me);
+			var end = false;
+			socket.emit('init', me, KOMA);
+			search();
 
-		socket.on('disconnect', function() {
-			socket.broadcast.emit('message', 'quit');
-		});
-	
-		function turnUpdate() {
-			if (data.turn == data.host[0])
-				data.turn = data.host[1];
-			else if (data.turn == data.host[1])
-				data.turn = data.host[0];
-		}
+			socket.on('update', function(U) {
+				me = socket.store.id;
+				if ( !U.moti && containAry(U.koma.name, nariKoma) && 
+					 ( ((U.moveTo.y > 5) && (me == data.host[0])) ||
+					   ((U.moveTo.y < 3) && (me == data.host[1])) ) ) {
+					socket.emit('naru', U);
+					return;
+				}
+				turnUpdate();
+				motiUpdate(U);
+				komaUpdate(U);
+				sendData();
+			})
 
-		function motiUpdate(U) {
-			var myKoma = new Array;
-			for (var i=0; i<data.motiGoma.length; ++i) {
-				if (data.motiGoma[i].host == U.me)
-					myKoma.push(data.motiGoma[i]);
+			socket.on('naru', function(U) {
+				turnUpdate();
+				motiUpdate(U);
+				komaUpdate(U);
+				sendData();
+			});
+
+			socket.on('disconnect', function() {
+				me = socket.store.id;
+				if ( containAry(me, data.host) ) {
+					(me == data.host[0]) ? data.host.shift() : data.host.pop();
+					socket.broadcast.emit('message', 'quit');
+				}
+			});
+
+			function search() {
+				if (data.host.length != 2)
+					socket.emit('message', "search");
+				else {
+					data.turn = data.host[(Math.random() * 2 | 0)];
+					data.komaList = KOMA.initialPosition();
+					socket.broadcast.emit('start', data, KOMA);
+					socket.emit('start', data, KOMA);
+				}
 			}
-			if (U.getKoma) {
-				console.log(U);
-				for (var i=0; i<data.komaList.length; ++i) {
-					if ( (data.komaList[i].pos.x == U.moveTo.x) &&
-						 (data.komaList[i].pos.y == U.moveTo.y) ) {
-						if ( containAry(data.komaList[i].name, nattaKoma) )
-							data.komaList[i].name = data.komaList[i].name.replace("N", "");
-						if (data.komaList[i].name == "ou")
-							end = true;
-						data.komaList[i].pos.x = (myKoma.length<20) ?
-												 ( (myKoma.length%2==0) ? 0 : 1 ) :
-												 ( (myKoma.length%2==0) ? 2 : 3 );
-						data.komaList[i].pos.y = (myKoma.length<20) ?
-												 Math.floor(myKoma.length/2) :
-												 Math.floor( (myKoma.length-20)/2 );
-						data.komaList[i].host = U.me;
-						data.motiGoma.push(data.komaList[i]);
-						data.komaList.splice(i, 1);
-						break;
-					}
-				}
-			} 
-			var myBegin = 0;
-			var motiBegin = 0;
-			if (U.moti) {
-				for (var i=0; i<myKoma.length; ++i) {
-					if ( (U.koma.name == myKoma[i].name) && 
-						 (U.koma.host == myKoma[i].host) ) {
-						U.koma.pos.x = U.moveTo.x;
-						U.koma.pos.y = U.moveTo.y;
-						data.komaList.push(U.koma);
-						myBegin = i;
-						break;
-					}
-				}
+		
+			function turnUpdate() {
+				if (data.turn == data.host[0])
+					data.turn = data.host[1];
+				else if (data.turn == data.host[1])
+					data.turn = data.host[0];
+			}
+
+			function motiUpdate(U) {
+				var myKoma = new Array;
 				for (var i=0; i<data.motiGoma.length; ++i) {
-					if ( equalObj(myKoma[myBegin], data.motiGoma[i]) ) {
-						data.motiGoma.splice(i, 1);
-						motiBegin = i;
-						break;
-					}
+					if (data.motiGoma[i].host == U.me)
+						myKoma.push(data.motiGoma[i]);
 				}
-				for (var i=myBegin; i<myKoma.length; ++i) {
-					myKoma[i].pos.x = (i < 20) ?
-									  ( (myKoma[i].pos.x%2==0) ? 1 : 0 ) :
-									  ( (i == 20) ?
-										 1 :
-									    ( (myKoma[i].pos.x%2==0) ? 3 : 2 )
-									  );
-					myKoma[i].pos.y = (i != 20) ?
-									  ( (myKoma[i].pos.x%2!=0) ?
-									    (myKoma[i].pos.y - 1) :
-									    (myKoma[i].pos.y) ) :
-									  ( (myKoma[i].pos.x%2!=0) ?
-										 9 :
-										 (myKoma[i].pos.y) );
-					for (var o=motiBegin; o<data.motiGoma.length; ++o) {
-						if ( equalObj(myKoma[i], data.motiGoma[o]) ) {
-							data.motiGoma[o].pos.x = myKoma[i].pos.x;
-							data.motiGoma[o].pos.y = myKoma[i].pos.y;
-							motiBegin = i;
-							console.log(data.motiGoma[o].pos);
+				if (U.getKoma) {
+					//console.log(U);
+					for (var i=0; i<data.komaList.length; ++i) {
+						if ( (data.komaList[i].pos.x == U.moveTo.x) &&
+							 (data.komaList[i].pos.y == U.moveTo.y) ) {
+							if ( containAry(data.komaList[i].name, nattaKoma) )
+								data.komaList[i].name = data.komaList[i].name.replace("N", "");
+							if (data.komaList[i].name == "ou")
+								end = true;
+							data.komaList[i].pos.x = (myKoma.length<20) ?
+													 ( (myKoma.length%2==0) ? 0 : 1 ) :
+													 ( (myKoma.length%2==0) ? 2 : 3 );
+							data.komaList[i].pos.y = (myKoma.length<20) ?
+													 Math.floor(myKoma.length/2) :
+													 Math.floor( (myKoma.length-20)/2 );
+							data.komaList[i].host = U.me;
+							data.motiGoma.push(data.komaList[i]);
+							data.komaList.splice(i, 1);
 							break;
+						}
+					}
+				} 
+				var myBegin = 0;
+				var motiBegin = 0;
+				if (U.moti) {
+					for (var i=0; i<myKoma.length; ++i) {
+						if ( (U.koma.name == myKoma[i].name) && 
+							 (U.koma.host == myKoma[i].host) ) {
+							U.koma.pos.x = U.moveTo.x;
+							U.koma.pos.y = U.moveTo.y;
+							data.komaList.push(U.koma);
+							myBegin = i;
+							break;
+						}
+					}
+					for (var i=0; i<data.motiGoma.length; ++i) {
+						if ( equalObj(myKoma[myBegin], data.motiGoma[i]) ) {
+							data.motiGoma.splice(i, 1);
+							motiBegin = i;
+							break;
+						}
+					}
+					for (var i=myBegin; i<myKoma.length; ++i) {
+						myKoma[i].pos.x = (i < 20) ?
+										  ( (myKoma[i].pos.x%2==0) ? 1 : 0 ) :
+										  ( (i == 20) ?
+											 1 :
+											( (myKoma[i].pos.x%2==0) ? 3 : 2 )
+										  );
+						myKoma[i].pos.y = (i != 20) ?
+										  ( (myKoma[i].pos.x%2!=0) ?
+											(myKoma[i].pos.y - 1) :
+											(myKoma[i].pos.y) ) :
+										  ( (myKoma[i].pos.x%2!=0) ?
+											 9 :
+											 (myKoma[i].pos.y) );
+						for (var o=motiBegin; o<data.motiGoma.length; ++o) {
+							if ( equalObj(myKoma[i], data.motiGoma[o]) ) {
+								data.motiGoma[o].pos.x = myKoma[i].pos.x;
+								data.motiGoma[o].pos.y = myKoma[i].pos.y;
+								motiBegin = i;
+								//console.log(data.motiGoma[o].pos);
+								break;
+							}
 						}
 					}
 				}
 			}
-		}
 
-		function komaUpdate(U) {
-			for (var i=0; i<data.komaList.length; ++i) {
-				if ( (data.komaList[i].pos.x == U.koma.pos.x) &&
-					 (data.komaList[i].pos.y == U.koma.pos.y) ) {
-					data.komaList[i].name = U.koma.name;
-					data.komaList[i].pos.x = U.moveTo.x;
-					data.komaList[i].pos.y = U.moveTo.y;
-					break;
+			function komaUpdate(U) {
+				for (var i=0; i<data.komaList.length; ++i) {
+					if ( (data.komaList[i].pos.x == U.koma.pos.x) &&
+						 (data.komaList[i].pos.y == U.koma.pos.y) ) {
+						data.komaList[i].name = U.koma.name;
+						data.komaList[i].pos.x = U.moveTo.x;
+						data.komaList[i].pos.y = U.moveTo.y;
+						break;
+					}
 				}
 			}
-		}
 
-		function sendData() {
-			if (end) {
-				socket.broadcast.emit('result', me, data);
-				socket.emit('result', me, data);
-			} else { 
-				socket.broadcast.emit('update', data);
-				socket.emit('update', data);
-			}
-		}
-
-		function containAry(elem, ary) {
-			for (var i=0; i<ary.length; ++i) {
-				if (elem == ary[i])
-					return true;
-			}
-			return false;
-		}
-
-		function equalObj(a, b) {
-			var flag = true;
-			if (Object.keys(a).length != Object.keys(b).length)
-				return false 
-			Object.keys(a).forEach( function(key) {
-				if ( (typeof(a[key]) == "object") &&
-					 (typeof(b[key]) == "object") ){
-					flag = equalObj(a[key], b[key]);
-					return;
+			function sendData() {
+				if (end) {
+					socket.broadcast.emit('result', me, data);
+					socket.emit('result', me, data);
+					data = { host: new Array,
+								 komaList: new Array,
+								 motiGoma: new Array,
+								 turn: null }
+				} else { 
+					socket.broadcast.emit('update', data);
+					socket.emit('update', data);
 				}
-				if (a[key] != b[key]) {
-					flag = false;
-					return;
+			}
+
+			function containAry(elem, ary) {
+				for (var i=0; i<ary.length; ++i) {
+					if (elem == ary[i])
+						return true;
 				}
-			});
-			return flag;
-		}
-	});
+				return false;
+			}
+
+			function equalObj(a, b) {
+				var flag = true;
+				if (Object.keys(a).length != Object.keys(b).length)
+					return false 
+				Object.keys(a).forEach( function(key) {
+					if ( (typeof(a[key]) == "object") &&
+						 (typeof(b[key]) == "object") ){
+						flag = equalObj(a[key], b[key]);
+						return;
+					}
+					if (a[key] != b[key]) {
+						flag = false;
+						return;
+					}
+				});
+				return flag;
+			}
+	}); 
 }).call(this);
+

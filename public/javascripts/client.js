@@ -9,7 +9,8 @@ ObjectModel.prototype.initialize = function(target) {
 	this.context = this.canvas.getContext("2d");
 }
 
-var socket = io.connect('http://localhost');
+var host = 'localhost:3000';
+var socket = io.connect('http://' + host + '/shogi');
 var NAME = "NAME"
   , MASU_SIZE = 60
   , MASU_NUM = 9
@@ -155,7 +156,9 @@ finger.run = function() {
 				}
 			}
 		}
-		console.log(finger.koma);
+
+		//console.log("finger.haveKoma", finger.haveKoma);
+		//console.log(finger.koma);
 
 		function curdraw() {
 			var size = MASU_SIZE;
@@ -285,7 +288,7 @@ finger.run = function() {
 				}
 				if ( (finger.pos.x == komaList.list[i].pos.x) &&
 					 (finger.pos.y == komaList.list[i].pos.y) ) {
-					console.log("finger, list", finger.pos, komaList.list[i]);
+					//console.log("finger, list", finger.pos, komaList.list[i]);
 					$("#message").html("<h1>他の駒があります</h1>");
 					return false;
 				}
@@ -775,20 +778,33 @@ function uniqObjAry(ary) {
 //==================================================
 
 $(function() {
-	socket.on('init', function(who) {
-		ME = who;
+	socket.on('visit', function() {
+		socket.emit('enter');
 	});
 
-	socket.on('message', function(msg) {
-		switch (msg) {
-		case "search":
-			$("#message").html("<h1>対戦相手を探しています...</h1>");
-			$("#NAME").css({display: "none"});
-			$("#myKoma").css({display: "none"});
-			$("#enemyKoma").css({display: "none"});
-			break;
-		case "quit":
-			$("#message").html("<h2>相手が対戦をやめました<br>新しい対戦相手を探しています...</h2>")
+	socket.on('notEnter', function() {
+		$("#message").html("<h1>他の組が対戦中です...</h1>");
+	});
+
+	socket.on('enter', function() {
+		socket = io.connect('http://' + host + '/shogi/room');
+
+		socket.on('message', function(msg) {
+			switch (msg) {
+			case "search":
+				$("#message").html("<h1>対戦相手を探しています...</h1>");
+				$("#NAME").css({display: "none"});
+				$("#myKoma").css({display: "none"});
+				$("#enemyKoma").css({display: "none"});
+				break;
+			case "quit":
+				restart("<h2>相手が接続を切りました<br>対戦相手を探しています...</h2>");
+				break;
+			}
+		})
+
+		function restart(msg) {
+			$("#message").html(msg);
 			$("#NAME").css({display: "none"})
 					  .unbind();
 			$("#myKoma").css({display: "none"})
@@ -796,47 +812,49 @@ $(function() {
 			$("#enemyKoma").css({display: "none"})
 						   .unbind();
 			manager.clear();
-			socket.emit('message', 'quit');
-			break;
 		}
-	})
 
-	socket.on('start', function(data, koma) {
-		DATA = data;
-		KOMA = koma;
-		KOMA.img = new Image();
-		KOMA.img.src = "../images/koma.png";
-		$("#NAME").css({display: "block"});
-		$("#myKoma").css({display: "block"});
-		$("#enemyKoma").css({display: "block"});
-		msgTurn();
-		manager.run();
-	});
+		socket.on('init', function(who, koma) {
+			ME = who;
+			KOMA = koma;
+			KOMA.img = new Image();
+			KOMA.img.src = "../images/koma.png";
+		});
 
-	socket.on('update', function(data) {
-		update(data);
-		motiGoma.update("myKoma");
-		motiGoma.update("enemyKoma");
-		msgTurn();
-	});
+		socket.on('start', function(data) {
+			DATA = data;
+			$("#NAME").css({display: "block"});
+			$("#myKoma").css({display: "block"});
+			$("#enemyKoma").css({display: "block"});
+			msgTurn();
+			manager.run();
+		});
 
-	socket.on('naru', function(U) {
-		if ( confirm("成りますか？") )
-			U.koma.name = U.koma.name + "N";
-		socket.emit('naru', U);
-	});
+		socket.on('update', function(data) {
+			update(data);
+			motiGoma.update("myKoma");
+			motiGoma.update("enemyKoma");
+			msgTurn();
+		});
 
-	socket.on('result', function(winner, data) {
-		var msg;
-		if (ME == winner)
-			msg = "<h1>勝ち</h1>";
-		else
-			msg = "<h1>負け</h1>";
-		update(data);
-		$("#NAME").unbind();
-		$("#myKoma").unbind();
-		$("#enemyKoma").unbind();
-		$("#message").html(msg);
+		socket.on('naru', function(U) {
+			if ( confirm("成りますか？") )
+				U.koma.name = U.koma.name + "N";
+			socket.emit('naru', U);
+		});
+
+		socket.on('result', function(winner, data) {
+			var msg;
+			if (ME == winner)
+				msg = "<h1>勝ち</h1>";
+			else
+				msg = "<h1>負け</h1>";
+			update(data);
+			$("#NAME").unbind();
+			$("#myKoma").unbind();
+			$("#enemyKoma").unbind();
+			$("#message").html(msg);
+		});
 	});
 
 	function update(data) {

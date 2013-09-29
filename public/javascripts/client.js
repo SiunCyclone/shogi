@@ -719,11 +719,18 @@ function equalAry(a, b) {
 }
 
 function containObj(elem, objAry) {
+  var result = false;
+  _.each(objAry, function(obj) {
+		if ( equalObj(elem, obj) )
+			result = true;
+  });
+  /*
 	for each (var obj in objAry) {
 		if ( equalObj(elem, obj) )
 			return true;
 	}
-	return false;
+  */
+	return result;
 }
 
 /*

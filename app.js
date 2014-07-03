@@ -7,12 +7,12 @@ var app = express()
 server.listen(3000)
 
 app.configure(function() {
-	//app.get時のurlを__dirname+'public'まで補完。
-	app.use(express.static(__dirname + '/public'));
+  //app.get時のurlを__dirname+'public'まで補完。
+  app.use(express.static(__dirname + '/public'));
 });
 
 app.get('/', function(req, res) { // URL「/」にアクセスがあれば実行
-	res.sendfile('index.html');
+  res.sendfile('index.html');
 });
 
 global.io = io;

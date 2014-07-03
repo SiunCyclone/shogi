@@ -12,13 +12,8 @@ WebSocketをつかった将棋です。
   * `Socket.IO` 
 
 ### コマンド ###
-	$ npm install express
-	$ npm install socket.io
-
-動作環境
-------
-
-firefoxで遊んでください。
+  $ npm install express
+  $ npm install socket.io
 
 ゲーム画面
 -------
